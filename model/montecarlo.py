@@ -62,7 +62,7 @@ def simulate(
         pr = rng.normal(PR_NONTHERMAL_DEFAULT, 0.02)
         d0 = rng.normal(DEGRADATION_RATE_DEFAULT, 5e-4)
 
-        # Baseline: typical year flat, only degradation
+        # Baseline: typical year flat, standard compounding degradation
         e_year_base = annual_energy(
             typical_ghi,
             typical_temp,
@@ -71,14 +71,18 @@ def simulate(
             noct=park.noct_c,
             pr_nonthermal=pr,
         )
-        deg_factors = degradation_factor(years, d0=d0)
-        annual_energies_baseline[draw, :] = e_year_base * deg_factors
+        deg_baseline = degradation_factor(years, d0=d0)
+        annual_energies_baseline[draw, :] = e_year_base * deg_baseline
 
-        # Sample climate-model scalar once per draw (correlated across years)
+        # Sample climate scalar once per draw (correlated trajectory)
         m = rng.standard_normal()
+        dT_draw = deltas.dT_per_year + m * deltas.dT_model_std  # shape (n_years,)
+
+        # Arrhenius: adjusted path uses temperature-accelerated degradation
+        deg_adjusted = degradation_factor(years, d0=d0, accelerated=True, dT_per_year=dT_draw)
 
         for year in range(n_years):
-            dT = deltas.dT_per_year[year] + m * deltas.dT_model_std[year]
+            dT = dT_draw[year]
 
             # Resample a historical year, shift temperature by climate delta
             ghi_sampled, temp_sampled = sample_year(baseline.ghi, baseline.temp_amb, rng)
@@ -97,7 +101,7 @@ def simulate(
                 pr_nonthermal=pr,
             )
 
-            annual_energies_adjusted[draw, year] = e_year_adj * deg_factors[year]
+            annual_energies_adjusted[draw, year] = e_year_adj * deg_adjusted[year]
 
     # Aggregate percentiles per year
     p10_annual = np.percentile(annual_energies_adjusted, 10, axis=0)
@@ -118,6 +122,7 @@ def simulate(
         "park_lon": park.lon,
         "park_capacity_kwp": park.capacity_kwp,
         "heat_tail_applied": heat_tail_series is not None,
+        "arrhenius_degradation": True,
         "dT_model_std_source": "EnviroTrust proxy (30% of delta)",
     }
 
