@@ -109,6 +109,33 @@ function fmtGap(gap: number, pct: number) {
   return `${sign}€${Math.abs(gap).toFixed(1)}M (${sign}${Math.abs(pct).toFixed(1)}%)`;
 }
 
+// ── Glossary ──────────────────────────────────────────────────────────────────
+
+function Term({ children, tip, className }: { children: React.ReactNode; tip: string; className?: string }) {
+  return (
+    <span className={`term-wrap${className ? ' ' + className : ''}`}>
+      <span className="term">{children}</span>
+      <span className="term-tip">{tip}</span>
+    </span>
+  );
+}
+
+const TWH_TIP = 'Terawatt-hour: 1 TWh = one trillion watt-hours. A large solar park produces 1–3 TWh over its lifetime — enough to power roughly 250,000 homes for a year.';
+const GWH_TIP = 'Gigawatt-hour: 1 GWh = one billion watt-hours. A mid-sized solar park generates 50–150 GWh per year — roughly enough for 15,000–45,000 homes.';
+
+function FmtValue({ gwh }: { gwh: number }) {
+  if (gwh >= 1000) {
+    return <>{(gwh / 1000).toFixed(2)} <Term tip={TWH_TIP}>TWh</Term></>;
+  }
+  return <>{gwh.toFixed(0)} <Term tip={GWH_TIP}>GWh</Term></>;
+}
+
+const SSP_TIPS: Record<string, string> = {
+  'SSP1-2.6': 'Low-emissions pathway — the world sharply cuts fossil fuel use, limiting warming to around 1.5–2°C above pre-industrial levels.',
+  'SSP2-4.5': 'Middle-road pathway — moderate climate action, projecting roughly 2–3°C of warming by 2100.',
+  'SSP5-8.5': 'High-emissions pathway — limited climate action, projecting 3–5°C of warming by 2100. The most severe risk benchmark.',
+};
+
 // ── Report generation (no external deps — opens a styled HTML blob) ───────────
 
 function buildSvgChart(data: Row[], colorLine: string, colorBand: string): string {
@@ -376,7 +403,7 @@ function WarmingSlider({ value, onChange }: SliderProps) {
         />
 
         <div className="warming-marks">
-          {SSP_MARKS.map(m => (
+          {SSP_MARKS.map((m, i) => (
             <div
               key={m.temp}
               className={`warming-mark${value >= m.temp - 0.25 && value <= m.temp + 0.25 ? ' active' : ''}`}
@@ -384,7 +411,15 @@ function WarmingSlider({ value, onChange }: SliderProps) {
             >
               <div className="warming-mark-tick" />
               <div className="warming-mark-label">{m.label}</div>
-              <div className="warming-mark-temp">{m.temp}°C · {m.sub}</div>
+              <div className="warming-mark-temp">
+                {m.temp}°C ·{' '}
+                <Term
+                  tip={SSP_TIPS[m.sub]}
+                  className={i === 0 ? 'tip-right' : i === SSP_MARKS.length - 1 ? 'tip-left' : undefined}
+                >
+                  {m.sub}
+                </Term>
+              </div>
             </div>
           ))}
         </div>
@@ -511,19 +546,32 @@ export function ParkForecast({ park, onClose }: Props) {
       {/* ── Headline cards ────────────────────────────────── */}
       <div className="forecast-headline">
         <div className="hl-item">
-          <div className="hl-label">Industry Standard</div>
-          <div className="hl-value">{fmt(lifetimeBaseline)}</div>
+          <div className="hl-label">
+            <Term tip="The method banks and insurers typically use: take historical average weather and assume the climate stays exactly the same for all 30 years. No adjustment for temperature trends.">
+              Industry Standard
+            </Term>
+          </div>
+          <div className="hl-value"><FmtValue gwh={lifetimeBaseline} /></div>
           <div className="hl-sub">30-year total output</div>
         </div>
         <div className="hl-sep" />
         <div className="hl-item">
-          <div className="hl-label">Climate-Adjusted · +{warmingLevel.toFixed(1)}°C</div>
-          <div className="hl-value" style={{ color: colors.line }}>{fmt(lifetimeP50)}</div>
+          <div className="hl-label">
+            Climate-Adjusted ·{' '}
+            <Term tip="How much average temperatures are projected to rise by 2055 above the pre-industrial baseline — the international reference used by climate scientists for all warming targets.">
+              +{warmingLevel.toFixed(1)}°C
+            </Term>
+          </div>
+          <div className="hl-value" style={{ color: colors.line }}><FmtValue gwh={lifetimeP50} /></div>
           <div className={`hl-delta ${dp50 < 0 ? 'neg' : 'pos'}`}>{dp50.toFixed(1)}%</div>
         </div>
         <div className="hl-sep" />
         <div className="hl-item">
-          <div className="hl-label">Revenue at Risk</div>
+          <div className="hl-label">
+            <Term tip="The earnings gap between the standard forecast and our climate-adjusted forecast — revenue the industry model counts that may not materialise as temperatures rise over the park's lifetime.">
+              Revenue at Risk
+            </Term>
+          </div>
           <div className="hl-value">{fmtRev(Math.abs(gapM_p50))}</div>
           <div className="hl-sub">vs industry standard</div>
         </div>
@@ -544,7 +592,9 @@ export function ParkForecast({ park, onClose }: Props) {
         </span>
         <span className="legend-baseline">
           <span className="legend-dash" />
-          Industry assumption (no climate change)
+          <Term tip="The standard forecast: uses historical average weather and assumes the climate stays exactly the same for all 30 years. This is the baseline that appears in most prospectuses.">
+            Industry assumption
+          </Term>{' '}(no climate change)
         </span>
       </div>
 
@@ -594,7 +644,11 @@ export function ParkForecast({ park, onClose }: Props) {
 
         {/* Heat risk */}
         <div className="heat-risk-row">
-          <span className="heat-risk-label">Climate Heat Risk</span>
+          <span className="heat-risk-label">
+            <Term tip="A score from 0–10 measuring how much extreme heat events are projected to affect this park's output through 2055. Higher = more heat exposure. Hotter panels produce less power and degrade faster over time.">
+              Climate Heat Risk
+            </Term>
+          </span>
           <span className="heat-risk-score" style={{ color: scoreNum >= 7 ? '#dc2626' : scoreNum >= 5 ? '#d97706' : '#059669' }}>
             {score}<span className="heat-risk-denom">/10</span>
           </span>
@@ -636,7 +690,9 @@ export function ParkForecast({ park, onClose }: Props) {
               </tbody>
             </table>
           </div>
-          <p className="finance-note">Price assumption: €{PRICE_EUR_PER_MWH}/MWh · illustrative, not a forecast</p>
+          <p className="finance-note">
+            Price assumption: €{PRICE_EUR_PER_MWH}/<Term tip="Megawatt-hour: 1,000 kWh — the standard unit for electricity pricing. At €74/MWh, the park earns €74 for every megawatt-hour it delivers to the grid.">MWh</Term> · illustrative, not a forecast
+          </p>
         </div>
 
         {/* Annual first 5 years */}

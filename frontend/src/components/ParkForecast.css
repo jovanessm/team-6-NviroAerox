@@ -107,7 +107,6 @@
   gap: 0;
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  overflow: hidden;
   margin-bottom: 1.5rem;
 }
 
@@ -533,6 +532,78 @@
 .finance-note {
   font-size: 0.75rem;
   color: var(--text-muted);
+}
+
+/* ── Glossary term tooltip ────────────────────────────────────────────── */
+.term-wrap {
+  display: inline-block;
+  position: relative;
+  cursor: help;
+}
+
+.term {
+  border-bottom: 1px dotted currentColor;
+  line-height: 1;
+}
+
+.term-tip {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 220px;
+  background: #0f172a;
+  color: #f8fafc;
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 400;
+  line-height: 1.55;
+  z-index: 9999;
+  transition: opacity 0.12s ease;
+  text-align: left;
+  white-space: normal;
+  letter-spacing: 0;
+  text-transform: none;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+}
+
+.term-tip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: #0f172a;
+}
+
+.term-wrap:hover .term-tip {
+  visibility: visible;
+  opacity: 1;
+}
+
+/* Alignment variants for terms near the left or right edge */
+.term-wrap.tip-right .term-tip {
+  left: 0;
+  transform: none;
+}
+.term-wrap.tip-right .term-tip::after {
+  left: 12px;
+  transform: none;
+}
+.term-wrap.tip-left .term-tip {
+  right: 0;
+  left: auto;
+  transform: none;
+}
+.term-wrap.tip-left .term-tip::after {
+  right: 12px;
+  left: auto;
+  transform: none;
 }
 
 /* ── Responsive ───────────────────────────────────────────────────────── */
