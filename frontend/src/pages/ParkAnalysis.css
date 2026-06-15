@@ -1,195 +1,110 @@
 .park-analysis {
-  width: 100%;
-  max-width: 1200px;
+  max-width: 1440px;
   margin: 0 auto;
-  padding: 2rem;
+  padding: 2rem 1.5rem 5rem;
 }
 
-.search-section {
-  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-  color: white;
-  border-radius: 12px;
-  padding: 3rem 2rem;
-  margin-bottom: 3rem;
-}
-
-.search-section h1 {
-  font-size: 2.5rem;
-  margin-bottom: 0.5rem;
-}
-
-.search-section p {
-  font-size: 1.1rem;
-  margin-bottom: 2rem;
-  opacity: 0.9;
-}
-
-.search-form {
-  display: flex;
-  gap: 1rem;
-  margin-bottom: 1rem;
-}
-
-.search-input {
-  flex: 1;
-  padding: 1rem;
-  border: none;
-  border-radius: 8px;
-  font-size: 1rem;
-  background: rgba(255, 255, 255, 0.95);
-}
-
-.search-input::placeholder {
-  color: #999;
-}
-
-.search-button {
-  padding: 1rem 2rem;
-  background: #4fc3f7;
-  color: #1e3c72;
-  border: none;
-  border-radius: 8px;
-  font-weight: bold;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-.search-button:hover:not(:disabled) {
-  background: #b3e5fc;
-  transform: translateY(-2px);
-}
-
-.search-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.error-message {
-  background: #ffebee;
-  color: #c62828;
-  padding: 1rem;
-  border-radius: 8px;
-  margin-top: 1rem;
-}
-
-.parks-section {
-  margin-bottom: 3rem;
-}
-
-.parks-section h2 {
-  font-size: 1.8rem;
+/* ── Page header ──────────────────────────────────────────────────────── */
+.analysis-page-header {
   margin-bottom: 1.5rem;
-  color: #1e3c72;
 }
 
-.parks-grid {
+.analysis-page-header h1 {
+  font-size: 1.625rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  margin-bottom: 0.25rem;
+}
+
+.analysis-page-header p {
+  font-size: 0.9375rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+/* ── Split layout ─────────────────────────────────────────────────────── */
+.split-layout {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 1.5rem;
+  grid-template-columns: 1fr 1.1fr;
+  gap: 1.25rem;
+  align-items: start;
 }
 
-.park-card {
-  background: white;
-  border: 2px solid #e0e0e0;
-  border-radius: 8px;
-  padding: 1.5rem;
-  cursor: pointer;
-  transition: all 0.3s;
+/* ── Left: sticky map column ──────────────────────────────────────────── */
+.split-map {
+  position: sticky;
+  top: 72px; /* header height (60px) + 12px gap */
 }
 
-.park-card:hover {
-  border-color: #4fc3f7;
-  box-shadow: 0 4px 12px rgba(79, 195, 247, 0.2);
+/* Override map wrapper in split context */
+.split-map .park-map-wrapper {
+  margin-bottom: 0;
 }
 
-.park-card.selected {
-  border-color: #1e3c72;
-  background: #f0f4ff;
-  box-shadow: 0 4px 12px rgba(30, 60, 114, 0.2);
+/* Taller map to match data panel */
+.split-map .park-map {
+  height: calc(100vh - 180px);
+  min-height: 480px;
 }
 
-.park-card h3 {
-  margin-bottom: 1rem;
-  color: #1e3c72;
-  font-size: 1.3rem;
+/* ── Right: data column ───────────────────────────────────────────────── */
+.split-data {
+  min-height: 480px;
 }
 
-.park-details {
+.split-data .park-forecast {
+  margin-bottom: 0;
+}
+
+/* ── Empty state ──────────────────────────────────────────────────────── */
+.no-selection {
+  height: 100%;
+  min-height: 480px;
+  background: var(--surface);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-lg);
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-}
-
-.park-details p {
-  font-size: 0.95rem;
-  color: #666;
-  margin: 0;
-}
-
-.park-details strong {
-  color: #1e3c72;
-}
-
-.analysis-section {
-  background: #f5f5f5;
-  border-radius: 12px;
-  padding: 2rem;
-}
-
-.analysis-section h2 {
-  color: #1e3c72;
-  margin-bottom: 1.5rem;
-}
-
-.scenarios-selector {
-  margin-bottom: 2rem;
-}
-
-.scenarios-selector h3 {
-  color: #1e3c72;
-  margin-bottom: 1rem;
-}
-
-.scenario-checkboxes {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.scenario-checkboxes label {
-  display: flex;
   align-items: center;
-  gap: 0.5rem;
-  cursor: pointer;
+  justify-content: center;
+  gap: 0.875rem;
+  text-align: center;
+  padding: 2.5rem;
+  color: var(--text-muted);
+}
+
+.no-selection-icon {
+  color: var(--slate-300);
+}
+
+.no-selection h3 {
   font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-secondary);
 }
 
-.scenario-checkboxes input[type='checkbox'] {
-  width: 18px;
-  height: 18px;
-  cursor: pointer;
+.no-selection p {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  max-width: 280px;
+  line-height: 1.7;
 }
 
-.analyze-button {
-  padding: 1rem 2rem;
-  background: #4fc3f7;
-  color: #1e3c72;
-  border: none;
-  border-radius: 8px;
-  font-weight: bold;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: all 0.3s;
-}
+/* ── Responsive ───────────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .split-layout {
+    grid-template-columns: 1fr;
+  }
 
-.analyze-button:hover:not(:disabled) {
-  background: #b3e5fc;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(79, 195, 247, 0.3);
-}
+  .split-map {
+    position: static;
+  }
 
-.analyze-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+  .split-map .park-map {
+    height: 400px;
+  }
+
+  .no-selection {
+    min-height: 200px;
+  }
 }

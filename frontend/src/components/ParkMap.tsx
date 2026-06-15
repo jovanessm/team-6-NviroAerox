@@ -1,8 +1,9 @@
 import { MapContainer, TileLayer, CircleMarker, Tooltip } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
+import type { ParkEntry } from './ParkForecast';
 import './ParkMap.css';
 
-const PARKS = [
+const PARKS: ParkEntry[] = [
   { name: 'Buergerwindpark Reussenkoge',        type: 'wind',  state: 'Schleswig-Holstein',      lat: 54.627, lon:  8.902 },
   { name: 'Windpark Holtriem',                  type: 'wind',  state: 'Lower Saxony',             lat: 53.610, lon:  7.429 },
   { name: 'Eggebek Solar Park',                 type: 'solar', state: 'Schleswig-Holstein',       lat: 54.629, lon:  9.343 },
@@ -25,51 +26,51 @@ const PARKS = [
   { name: 'Solarpark Pocking',                  type: 'solar', state: 'Bavaria',                  lat: 48.368, lon: 13.299 },
 ];
 
-export function ParkMap() {
+interface Props {
+  onParkClick?: (park: ParkEntry) => void;
+  selectedParkName?: string | null;
+}
+
+export function ParkMap({ onParkClick, selectedParkName }: Props) {
   return (
     <div className="park-map-wrapper">
       <div className="park-map-header">
         <h2>20 German Renewable Parks</h2>
         <div className="park-map-legend">
-          <span className="legend-item">
-            <span className="legend-dot solar" /> Solar
-          </span>
-          <span className="legend-item">
-            <span className="legend-dot wind" /> Wind
-          </span>
+          <span className="legend-item"><span className="legend-dot solar" /> Solar</span>
+          <span className="legend-item"><span className="legend-dot wind" /> Wind</span>
+          {onParkClick && <span className="legend-hint">Click a park to forecast</span>}
         </div>
       </div>
-      <MapContainer
-        center={[51.5, 10.5]}
-        zoom={6}
-        className="park-map"
-        scrollWheelZoom={false}
-      >
+      <MapContainer center={[51.5, 10.5]} zoom={6} className="park-map" scrollWheelZoom={false}>
         <TileLayer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         />
-        {PARKS.map((park) => (
-          <CircleMarker
-            key={park.name}
-            center={[park.lat, park.lon]}
-            radius={8}
-            pathOptions={{
-              color: park.type === 'solar' ? '#f59e0b' : '#3b82f6',
-              fillColor: park.type === 'solar' ? '#fbbf24' : '#60a5fa',
-              fillOpacity: 0.85,
-              weight: 2,
-            }}
-          >
-            <Tooltip>
-              <strong>{park.name}</strong>
-              <br />
-              {park.type.charAt(0).toUpperCase() + park.type.slice(1)} &middot; {park.state}
-              <br />
-              {park.lat.toFixed(3)}, {park.lon.toFixed(3)}
-            </Tooltip>
-          </CircleMarker>
-        ))}
+        {PARKS.map((park) => {
+          const isSelected = park.name === selectedParkName;
+          const isSolar    = park.type === 'solar';
+          return (
+            <CircleMarker
+              key={park.name}
+              center={[park.lat, park.lon]}
+              radius={isSelected ? 11 : 8}
+              pathOptions={{
+                color:       isSelected ? '#10b981' : (isSolar ? '#f59e0b' : '#3b82f6'),
+                fillColor:   isSelected ? '#34d399' : (isSolar ? '#fbbf24' : '#60a5fa'),
+                fillOpacity: 0.9,
+                weight:      isSelected ? 3 : 2,
+              }}
+              eventHandlers={{ click: () => onParkClick?.(park) }}
+            >
+              <Tooltip>
+                <strong>{park.name}</strong><br />
+                {park.type.charAt(0).toUpperCase() + park.type.slice(1)} &middot; {park.state}<br />
+                {park.lat.toFixed(3)}, {park.lon.toFixed(3)}
+              </Tooltip>
+            </CircleMarker>
+          );
+        })}
       </MapContainer>
     </div>
   );

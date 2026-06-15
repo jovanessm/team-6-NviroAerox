@@ -1,5 +1,13 @@
 .park-map-wrapper {
-  margin-bottom: 3rem;
+  margin-bottom: 2rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  box-shadow: var(--shadow-sm);
+  isolation: isolate;   /* contains Leaflet's internal z-indices (400–700) */
+  position: relative;
+  z-index: 0;
 }
 
 .park-map-header {
@@ -10,30 +18,33 @@
 }
 
 .park-map-header h2 {
-  font-size: 1.8rem;
-  color: #1e3c72;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--text-primary);
   margin: 0;
 }
 
 .park-map-legend {
   display: flex;
-  gap: 1.5rem;
+  gap: 1.25rem;
 }
 
 .legend-item {
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  font-size: 0.95rem;
-  color: #444;
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  font-weight: 500;
 }
 
 .legend-dot {
   display: inline-block;
-  width: 12px;
-  height: 12px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
-  border: 2px solid rgba(0, 0, 0, 0.25);
+  border: 2px solid rgba(0, 0, 0, 0.15);
+  flex-shrink: 0;
 }
 
 .legend-dot.solar {
@@ -46,10 +57,15 @@
   border-color: #3b82f6;
 }
 
+.legend-hint {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-left: 0.25rem;
+}
+
 .park-map {
-  height: 420px;
+  height: 500px;
   width: 100%;
-  border-radius: 12px;
-  border: 1px solid #e0e0e0;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
 }

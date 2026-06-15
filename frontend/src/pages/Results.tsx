@@ -15,9 +15,9 @@ export function Results() {
   if (!state?.result || !state?.park) {
     return (
       <div className="results-error">
-        <h1>No Results</h1>
-        <p>Please run an analysis first.</p>
-        <button onClick={() => navigate('/analyze')}>Back to Analysis</button>
+        <h1>No results yet</h1>
+        <p>Run an analysis first to see climate-adjusted output forecasts.</p>
+        <button onClick={() => navigate('/analyze')}>Go to Analyze</button>
       </div>
     );
   }
@@ -36,35 +36,35 @@ export function Results() {
 
   return (
     <div className="results">
-      <section className="results-header">
-        <button className="back-button" onClick={() => navigate('/analyze')}>
-          ← Back to Analysis
+      <div className="results-header">
+        <button className="results-back" onClick={() => navigate('/analyze')}>
+          ← Back
         </button>
-        <h1>Prediction Results: {park.name}</h1>
+        <h1>Results: {park.name}</h1>
         <div className="park-summary">
           <span className="badge">{park.type.toUpperCase()}</span>
           <span className="capacity">{park.capacity} MW</span>
           <span className="location">
-            {park.location.lat.toFixed(2)}°, {park.location.lng.toFixed(2)}°
+            {park.location.lat.toFixed(3)}°, {park.location.lng.toFixed(3)}°
           </span>
         </div>
-      </section>
+      </div>
 
-      <section className="results-content">
+      <div className="results-content">
         <div className="baseline-card">
-          <h2>Baseline Output (Historical)</h2>
-          <div className="metric">
-            <span className="value">
+          <div>
+            <h2>Baseline output</h2>
+            <div className="metric-value">
               {(result.baselineOutput / 1e6).toFixed(2)} TWh
-            </span>
-            <span className="label">30-year lifetime</span>
+            </div>
+            <div className="metric-label">30-year lifetime · standard method</div>
           </div>
           {result.historicalOutput && (
-            <p className="note">
-              Historical actual output: {(result.historicalOutput / 1e6).toFixed(2)} TWh
+            <p className="baseline-note">
+              Historical actual: {(result.historicalOutput / 1e6).toFixed(2)} TWh
               {result.divergence && (
                 <span className={result.divergence > 0 ? 'positive' : 'negative'}>
-                  {result.divergence > 0 ? '+' : ''}{result.divergence.toFixed(1)}%
+                  {' '}{result.divergence > 0 ? '+' : ''}{result.divergence.toFixed(1)}%
                 </span>
               )}
             </p>
@@ -72,47 +72,40 @@ export function Results() {
         </div>
 
         <div className="scenarios-section">
-          <h2>Climate Scenarios</h2>
-          <p className="description">
-            How does lifetime output change under different climate projections?
+          <h2>Climate scenarios</h2>
+          <p className="scenarios-description">
+            Lifetime output under different emissions pathways — P50 central estimate with P5–P95 uncertainty band.
           </p>
-
           <div className="scenarios-comparison">
             {scenarios.map((scenario) => (
               <div key={scenario.name} className="scenario-item">
                 <h3>{formatScenarioName(scenario.name)}</h3>
-
                 <div className="output-bar">
-                  <div className="uncertainty-range">
-                    <div
-                      className="range-bar"
-                      style={{
-                        width: `${((scenario.upper - scenario.lower) / maxOutput) * 100}%`,
-                        left: `${(scenario.lower / maxOutput) * 100}%`,
-                      }}
-                    ></div>
-                  </div>
+                  <div
+                    className="range-bar"
+                    style={{
+                      width: `${((scenario.upper - scenario.lower) / maxOutput) * 100}%`,
+                      left: `${(scenario.lower / maxOutput) * 100}%`,
+                    }}
+                  />
                   <div
                     className="output-marker"
-                    style={{
-                      left: `${(scenario.output / maxOutput) * 100}%`,
-                    }}
-                  ></div>
+                    style={{ left: `${(scenario.output / maxOutput) * 100}%` }}
+                  />
                 </div>
-
                 <div className="scenario-details">
                   <div className="detail">
-                    <span className="label">Best estimate:</span>
+                    <span className="label">P50</span>
                     <span className="value">{(scenario.output / 1e6).toFixed(2)} TWh</span>
                   </div>
                   <div className="detail">
-                    <span className="label">5th–95th percentile:</span>
+                    <span className="label">P5–P95 range</span>
                     <span className="value">
-                      {(scenario.lower / 1e6).toFixed(2)} – {(scenario.upper / 1e6).toFixed(2)} TWh
+                      {(scenario.lower / 1e6).toFixed(2)}–{(scenario.upper / 1e6).toFixed(2)} TWh
                     </span>
                   </div>
                   <div className="detail">
-                    <span className="label">Uncertainty:</span>
+                    <span className="label">Uncertainty</span>
                     <span className="value">±{scenario.uncertainty.toFixed(1)}%</span>
                   </div>
                 </div>
@@ -122,33 +115,33 @@ export function Results() {
         </div>
 
         {result.assumptions && result.assumptions.length > 0 && (
-          <section className="assumptions-section">
-            <h2>Assumptions & Data Sources</h2>
+          <div className="assumptions-section">
+            <h2>Assumptions & data sources</h2>
             <ul className="assumptions-list">
-              {result.assumptions.map((assumption, idx) => (
-                <li key={idx}>{assumption}</li>
+              {result.assumptions.map((a, i) => (
+                <li key={i}>{a}</li>
               ))}
             </ul>
-          </section>
+          </div>
         )}
 
-        <section className="actions">
+        <div className="actions">
           <button className="secondary-button" onClick={() => navigate('/analyze')}>
-            Analyze Another Park
+            Analyze another park
           </button>
-        </section>
-      </section>
+        </div>
+      </div>
     </div>
   );
 }
 
 function formatScenarioName(name: string): string {
-  const names: { [key: string]: string } = {
-    historical: 'Historical (Baseline)',
-    ssp126: 'SSP1-2.6 (Low Emissions)',
-    ssp245: 'SSP2-4.5 (Moderate)',
-    ssp370: 'SSP3-7.0 (High)',
-    ssp585: 'SSP5-8.5 (Very High)',
+  const names: Record<string, string> = {
+    historical: 'Historical — baseline',
+    ssp126: 'SSP1-2.6 — low emissions',
+    ssp245: 'SSP2-4.5 — moderate warming',
+    ssp370: 'SSP3-7.0 — high emissions',
+    ssp585: 'SSP5-8.5 — very high emissions',
   };
-  return names[name] || name;
+  return names[name] ?? name;
 }
