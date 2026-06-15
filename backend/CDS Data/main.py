@@ -89,21 +89,6 @@ PARKS = [
 ]
 
 
-CHUNK_YEARS = 2  # fetch in 2-year windows to avoid timeouts
-
-
-def _year_chunks(start: str, end: str):
-    """Yield (chunk_start, chunk_end) pairs in CHUNK_YEARS-sized windows."""
-    s = date.fromisoformat(start)
-    e = date.fromisoformat(end)
-    while s <= e:
-        chunk_end = date(min(s.year + CHUNK_YEARS - 1, e.year), 12, 31)
-        if chunk_end > e:
-            chunk_end = e
-        yield s.isoformat(), chunk_end.isoformat()
-        s = date(s.year + CHUNK_YEARS, 1, 1)
-
-
 def _fetch_chunk(lat, lon, start, end, retry=3):
     params = {
         "latitude":        lat,
@@ -117,7 +102,7 @@ def _fetch_chunk(lat, lon, start, end, retry=3):
     }
     for attempt in range(1, retry + 1):
         try:
-            r = requests.get(API_URL, params=params, timeout=120)
+            r = requests.get(API_URL, params=params, timeout=300)
             r.raise_for_status()
             return pd.DataFrame(r.json()["hourly"])
         except requests.exceptions.HTTPError as e:
@@ -147,21 +132,12 @@ def fetch_park(park: tuple, dry_run: bool = False) -> None:
         log.info(f"  DRY   {name}  ({ptype}, {state})  lat={lat}, lon={lon}")
         return
 
-    chunks = list(_year_chunks(START_DATE, END_DATE))
-    log.info(f"  FETCH {name}  ({ptype}, {state})  {len(chunks)} chunks × {CHUNK_YEARS}yr")
+    log.info(f"  FETCH {name}  ({ptype}, {state})  {START_DATE} → {END_DATE}")
 
-    frames = []
-    for i, (c_start, c_end) in enumerate(chunks, 1):
-        log.info(f"    chunk {i}/{len(chunks)}  {c_start} → {c_end}")
-        df_chunk = _fetch_chunk(lat, lon, c_start, c_end)
-        if df_chunk is None:
-            log.error(f"  FAILED {name} — chunk {c_start}→{c_end} could not be fetched")
-            return
-        frames.append(df_chunk)
-        if i < len(chunks):
-            time.sleep(1)
-
-    df = pd.concat(frames, ignore_index=True)
+    df = _fetch_chunk(lat, lon, START_DATE, END_DATE)
+    if df is None:
+        log.error(f"  FAILED {name}")
+        return
     df.rename(columns={"time": "datetime"}, inplace=True)
     df.insert(0, "park",  name)
     df.insert(1, "type",  ptype)
@@ -188,9 +164,8 @@ def main(park_index: int = None, dry_run: bool = False) -> None:
     for i, park in enumerate(parks, 1):
         log.info(f"[{i}/{len(parks)}] {park[0]}")
         fetch_park(park, dry_run=dry_run)
-        # Be polite to the free API — small pause between requests
         if not dry_run and i < len(parks):
-            time.sleep(1)
+            time.sleep(5)
 
     log.info("")
     log.info("✓ All done.")
