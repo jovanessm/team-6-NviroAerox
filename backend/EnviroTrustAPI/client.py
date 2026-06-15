@@ -33,3 +33,21 @@ class EnviroTrustClient:
             "latitude": lat,
             "longitude": lon,
         })
+
+    def get_heat_wind_daily(self, lat: float, lon: float, from_date: str | None = None, to_date: str | None = None) -> dict:
+        """Historical daily temperature observations — used to build the baseline typical year."""
+        params: dict = {"latitude": lat, "longitude": lon}
+        if from_date:
+            params["from_date"] = from_date
+        if to_date:
+            params["to_date"] = to_date
+        return self._get("/api/heat-wind/daily", params)
+
+    def get_wildfire_timeseries(self, lat: float, lon: float, from_year: int = 2024, to_year: int = 2054) -> dict:
+        """Yearly extreme-heat days per scenario — feeds the heat-tail lever in the physics model."""
+        return self._get("/api/wildfire/timeseries", {
+            "latitude": lat,
+            "longitude": lon,
+            "from_year": from_year,
+            "to_year": to_year,
+        })
