@@ -1,0 +1,17 @@
+# Environment variables — never commit secrets
+.env
+**/.env
+
+# Python cache
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+
+# Node
+node_modules/
+frontend/dist/
+
+# OS
+.DS_Store
+Thumbs.db
