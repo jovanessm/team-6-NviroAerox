@@ -32,14 +32,14 @@ def heat_wind_to_climate_deltas(
     """
     Convert EnviroTrust heat-wind/timeseries response to ClimateDeltas.
 
-    Temperature is returned in Kelvin (daily max). We:
-    1. Convert K → °C
-    2. Compute dT = projected_temp - historical_baseline_mean
-    3. Estimate ensemble spread from 30% of delta (proxy for missing CMIP6 ensemble)
+    Temperature is returned in Kelvin (daily max). We compute dT as the
+    change relative to the first projection year (2024 = current climate),
+    not vs ERA5 mean — because the API gives daily max, not mean ambient.
 
     Args:
         timeseries_data: list of yearly dicts from heat_wind_timeseries_data
-        baseline_temp_c: historical mean temperature in °C (from ERA5)
+        baseline_temp_c: unused (kept for API compatibility); baseline is taken
+                         internally from the first projection year
         scenario: "RCP4.5" or "RCP8.5"
 
     Returns:
@@ -48,17 +48,22 @@ def heat_wind_to_climate_deltas(
     if scenario not in ("RCP4.5", "RCP8.5"):
         raise ValueError(f"Unknown scenario '{scenario}'. Use 'RCP4.5' or 'RCP8.5'.")
 
-    temp_key = f"daily max temperature {scenario.lower()}(K)"
+    # API key format: "daily max temperature rcp45(K)" (no dot)
+    api_key = scenario.lower().replace(".", "")
+    temp_key = f"daily max temperature {api_key}(K)"
     sorted_data = sorted(timeseries_data, key=lambda x: x["year"])
 
     temps_k = np.array([record[temp_key] for record in sorted_data])
     temps_c = temps_k - 273.15
 
-    dT_per_year = temps_c - baseline_temp_c
+    # dT = change relative to first year (2024 baseline) — keeps comparison
+    # internally consistent within the API's own daily-max metric
+    reference_temp = temps_c[0]
+    dT_per_year = temps_c - reference_temp
 
-    # Ensemble spread proxy: no full CMIP6 ensemble available from API
-    # Use 30% of absolute delta as a conservative model-uncertainty estimate
-    dT_model_std = np.abs(dT_per_year) * 0.3
+    # Ensemble spread proxy: no full CMIP6 ensemble from API
+    # Use 0.3°C fixed floor + 20% of delta as conservative uncertainty estimate
+    dT_model_std = np.maximum(0.3, np.abs(dT_per_year) * 0.2)
 
     return ClimateDeltas(
         scenario=scenario,
