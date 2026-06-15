@@ -8,7 +8,7 @@ that conflicts with them.
 
 ## What we're building
 
-A tool that predicts the **lifetime energy output of one real, operating German solar park**
+A tool that predicts the **lifetime energy output of real, operating German solar parks**
 under a shifting climate, and shows how that prediction differs from the standard
 history-based method. Hackathon entry for the EnviroTrust "Power, Seen From Orbit" challenge.
 
@@ -172,7 +172,7 @@ Stub these with fake-but-shaped data on day one so the frontend integrates immed
 
 - ❌ Train an ML model on weather → output. (No labels; bakes in past climate; un-explainable.)
 - ❌ Hunt for per-park actual generation. (Not public in Germany. Kill on sight.)
-- ❌ Build a broad platform / multiple parks / VLM satellite ingestion. One park, deep.
+- ❌ Build a broad platform / VLM satellite ingestion. Solar parks only (wind excluded — signal is weak).
 - ❌ Average SSP scenarios into one line.
 - ❌ Lean on irradiance/cloud projections as a headline driver.
 - ❌ Overstate the lifetime delta. Report the honest band.
@@ -182,7 +182,8 @@ Stub these with fake-but-shaped data on day one so the frontend integrates immed
 
 ## Demo target (what the code must serve)
 
-One screen: pick the real park → annual output over 30 years, **flat baseline line vs
-climate-trending P50 with a shaded scenario band**, one headline ("standard method: X GWh
-lifetime; climate-adjusted P50: X−n%, P90: X−m%"), and a click that reveals the inputs behind
-any point. Hits all three hard constraints, maxes the partner bonus, demos in 90 seconds.
+One screen: pick a solar park from the map → annual output over 30 years, **flat baseline
+line vs climate-trending P50 with a shaded scenario band**, one headline ("standard method:
+X GWh lifetime; climate-adjusted P50: X−n%, P90: X−m%"), and a click that reveals the inputs
+behind any point. Results are pre-computed at deploy time — UI response is instant.
+Hits all three hard constraints, maxes the partner bonus, demos in 90 seconds.
