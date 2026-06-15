@@ -17,5 +17,4 @@ frontend/dist/
 Thumbs.db
 
 # Generated files — run precompute.py to regenerate
-backend/precomputed.json
 backend/api_cache/
