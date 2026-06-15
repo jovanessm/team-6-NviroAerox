@@ -1,3 +1,5 @@
+# CLAUDE.md
+
 Context for working on this repo. Read before writing code. The decisions below are
 **settled** — do not relitigate them mid-build, and flag (don't silently override) anything
 that conflicts with them.
@@ -78,10 +80,10 @@ Four parallel modules. Agree the data contract first; everyone builds against st
 
 | Module | Owner | Responsibility |
 |---|---|---|
-| `data/` | data person | MaStR park specs, Open-Meteo/ERA5 baseline weather, CDS temperature deltas |
-| `model/` | **this seat** | physics core + uncertainty engine + provenance (the prediction) |
+| `data/` | data | MaStR park specs, Open-Meteo/ERA5 baseline weather, CDS temperature deltas |
+| `model/` | model | physics core + uncertainty engine + provenance (the prediction) |
 | `app/` | frontend | Streamlit/web UI: pick park → fan chart (baseline vs adjusted) + headline + trace |
-| `finance/` + pitch | finance person | money translation (DSCR, revenue gap — illustrative), business case, pitch |
+| `finance/` + pitch | finance | money translation (DSCR, revenue gap — illustrative), business case, pitch |
 
 **Open question to resolve at kickoff:** the EnviroTrust "Climate Risks API" is likely hazard
 *indicators*, not forward temperature *trajectories*. Confirm with the partner whether it returns
@@ -131,7 +133,7 @@ Stub these with fake-but-shaped data on day one so the frontend integrates immed
 
 ---
 
-## The model (model/ — this seat)
+## The model (`model/`)
 
 1. **Physics core — pure, deterministic, one year.** Closed-form NOCT:
    - `T_cell = T_amb + (NOCT - 20)/800 * GHI`
@@ -148,7 +150,7 @@ Stub these with fake-but-shaped data on day one so the frontend integrates immed
    - interannual weather (sample different historical years)
    - parameters (γ, PR, degradation rate as small distributions)
    → P50/P90 fans + lifetime distribution. Add a **variance decomposition** (which source
-   dominates at each horizon) if time allows — it's the best answer to "what can't your data say".
+   dominates at each horizon) if time allows — it's the best answer to "what the data can't say."
 
 **Public API:** `simulate(park, baseline_weather, deltas, n_draws) -> Prediction` per scenario.
 
