@@ -132,10 +132,6 @@ def fetch_park(park: tuple, dry_run: bool = False) -> None:
     log.info(f"  DONE  {name}  → {out_file}  ({rows:,} rows, {size_kb:.0f} KB)")
 
 
-SLEEP_BETWEEN_FETCHES = 300   # 5 min between actual API calls — avoids 429s
-INITIAL_COOLDOWN      = 600   # 10 min before first new fetch if resuming a throttled session
-
-
 def main(park_index: int = None, dry_run: bool = False) -> None:
     parks = [PARKS[park_index]] if park_index is not None else PARKS
 
@@ -146,22 +142,11 @@ def main(park_index: int = None, dry_run: bool = False) -> None:
         log.info("DRY RUN — no files will be written")
     log.info("")
 
-    needs_initial_cooldown = not dry_run and any(
-        not (OUTPUT_DIR / f"{p[0]}.csv").exists() for p in parks
-    )
-    if needs_initial_cooldown:
-        log.info(f"Initial cooldown {INITIAL_COOLDOWN}s before first fetch (rate-limit window reset)...")
-        time.sleep(INITIAL_COOLDOWN)
-
-    fetched_count = 0
     for i, park in enumerate(parks, 1):
         log.info(f"[{i}/{len(parks)}] {park[0]}")
-        already_exists = (OUTPUT_DIR / f"{park[0]}.csv").exists()
         fetch_park(park, dry_run)
-        if not dry_run and not already_exists and i < len(parks):
-            fetched_count += 1
-            log.info(f"  Cooling down {SLEEP_BETWEEN_FETCHES}s before next fetch...")
-            time.sleep(SLEEP_BETWEEN_FETCHES)
+        if not dry_run and i < len(parks):
+            time.sleep(5)
 
     log.info("")
     log.info("✓ All done.")
