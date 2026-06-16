@@ -180,6 +180,18 @@ def run(output_path: Path, dry_run: bool = False, n_draws: int = 3000, use_faima
         output["parks"].append(park_entry)
 
     if not dry_run:
+        # Derive risk_score 0–10 from RCP8.5 delta_pct across all computed parks.
+        # Larger absolute loss → higher risk. Normalized so the worst park = 10.
+        parks_with_rcp85 = [p for p in output["parks"] if "RCP8.5" in p.get("scenarios", {})]
+        if len(parks_with_rcp85) >= 2:
+            deltas = [abs(p["scenarios"]["RCP8.5"]["delta_pct"]) for p in parks_with_rcp85]
+            min_d, max_d = min(deltas), max(deltas)
+            denom = max_d - min_d if max_d > min_d else 1.0
+            for park, d in zip(parks_with_rcp85, deltas):
+                park["risk_score"] = round(10 * (d - min_d) / denom, 1)
+        elif len(parks_with_rcp85) == 1:
+            parks_with_rcp85[0]["risk_score"] = 5.0  # single park: mid-range placeholder
+
         output_path.parent.mkdir(parents=True, exist_ok=True)
         with open(output_path, "w") as f:
             json.dump(output, f, indent=2)
