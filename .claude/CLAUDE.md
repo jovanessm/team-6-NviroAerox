@@ -54,9 +54,15 @@ The whole point is that the climate dimension changes the result vs leaning on h
   as a *future-work scaling story* in the pitch (emulate the physics to score many parks fast).
 - **Delta method for the climate signal.** Do NOT ingest and bias-correct full CMIP6 fields
   (it eats a day). Pull only the *temperature change signal* (ΔT per year for the grid cell, a
-  few models × 2–3 SSPs) and superimpose it on the historical baseline. Robust, fast, and still
-  earns the bonus because the projection is what moves the number.
-- **Don't average SSP scenarios.** Run them as separate branches and show the spread.
+  few models × 2–3 scenarios) and superimpose it on the historical baseline. Robust, fast, and
+  still earns the bonus because the projection is what moves the number.
+  - **As built (`model/cmip6.py`):** ΔT comes from the Open-Meteo Climate API 7-model HighResMIP
+    ensemble (`temperature_2m_mean`, SSP5-8.5), fitting each model's annual-mean warming trend.
+    Ensemble mean = ΔT; across-model std = real `dT_model_std`. Scenarios are RCP2.6/4.5/8.5
+    (HighResMIP is SSP5-8.5 → RCP8.5; 4.5/2.6 = IPCC AR6 Central Europe near-term scaling).
+  - **Rejected:** the EnviroTrust "daily max temperature" + wildfire fields — annual extremes with
+    no usable trend (RCP8.5 trended toward *cooling*). Do not wire them back in as the climate signal.
+- **Don't average scenarios.** Run RCP2.6/4.5/8.5 as separate branches and show the spread.
 
 ---
 
@@ -80,7 +86,7 @@ Four parallel modules. Agree the data contract first; everyone builds against st
 
 | Module | Owner | Responsibility |
 |---|---|---|
-| `data/` | data | MaStR park specs, Open-Meteo/ERA5 baseline weather, CDS temperature deltas |
+| `data/` | data | MaStR park specs, Open-Meteo/ERA5 baseline weather, CMIP6 ensemble temperature deltas |
 | `model/` | model | physics core + uncertainty engine + provenance (the prediction) |
 | `app/` | frontend | Streamlit/web UI: pick park → fan chart (baseline vs adjusted) + headline + trace |
 | `finance/` + pitch | finance | money translation (DSCR, revenue gap — illustrative), business case, pitch |
@@ -113,10 +119,12 @@ class BaselineWeather:     # from Open-Meteo / ERA5, multi-year hourly
     # enough years to build a typical year AND sample interannual variability
 
 @dataclass
-class ClimateDeltas:       # from CDS (delta method)
-    scenario: str            # "SSP1-2.6" | "SSP2-4.5" | "SSP5-8.5"
+class ClimateDeltas:       # from CMIP6 ensemble (delta method) — see model/cmip6.py
+    scenario: str            # "RCP2.6" | "RCP4.5" | "RCP8.5"
     dT_per_year: np.ndarray  # °C added to ambient, shape (n_years,)
     dT_model_std: np.ndarray # ensemble spread per year, shape (n_years,)
+    source: str = ""         # provenance: where the ΔT signal came from
+    std_source: str = ""     # provenance: where dT_model_std came from
 
 # Output from model/ (per scenario)
 @dataclass

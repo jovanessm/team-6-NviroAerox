@@ -6,6 +6,7 @@ import { useMemo } from 'react';
 import './ParkForecast.css';
 
 export interface ParkEntry {
+<<<<<<< HEAD
   name:     string;
   type:     string;
   state:    string;
@@ -13,6 +14,17 @@ export interface ParkEntry {
   lon:      number;
   capacity: number;
   risk:     number;
+=======
+  name:         string;
+  type:         string;
+  state:        string;
+  lat:          number;
+  lon:          number;
+  capacity:     number; // MWp
+  risk:         number; // heat risk 0–10
+  windExposure: number; // fraction of open-field wind at panel surface (from GRW satellite)
+  meanWindMs:   number; // ERA5 mean wind_speed_10m, m/s
+>>>>>>> f83c0a7e48d12eefd763fdadb77b8969cc8a5c5d
 }
 
 interface Props {
@@ -68,6 +80,7 @@ interface Row {
   degrad:   number;
 }
 
+<<<<<<< HEAD
 // One recharts row merging all three scenarios + the shared baseline
 interface MultiRow {
   year:     number;
@@ -80,6 +93,19 @@ interface MultiRow {
 
 function buildRows(capacity: number, risk: number, totalWarming: number): Row[] {
   const BASE       = capacity * 0.95;
+=======
+function faimanBaselineBoost(windExposure: number, meanWindMs: number): number {
+  const effectiveWind  = windExposure * meanWindMs;
+  const meanGhi        = 400; // W/m² — representative Germany daylight GHI
+  const noctDelta      = meanGhi * (45 - 20) / 800; // °C NOCT heating above ambient
+  const faimanDelta    = meanGhi / (25 + 6.84 * effectiveWind); // °C Faiman heating
+  const coolerBy       = noctDelta - faimanDelta; // Faiman panels run this many °C cooler
+  return coolerBy * 0.004; // power fraction recovered (|γ| = 0.004 /°C)
+}
+
+function buildWarmingData(capacity: number, risk: number, totalWarming: number, windBoost = 0): Row[] {
+  const BASE       = capacity * 0.95 * (1 + windBoost); // ~950 kWh/kWp/yr → GWh; Faiman adds wind cooling
+>>>>>>> f83c0a7e48d12eefd763fdadb77b8969cc8a5c5d
   const DEGRAD     = 0.005;
   const GAMMA      = -0.004;
   const dTperYear  = totalWarming / 30;
@@ -235,8 +261,22 @@ function generateReportHtml(
   park:             ParkEntry,
   data:             MultiRow[],
   lifetimeBaseline: number,
+<<<<<<< HEAD
   revBaseline:      number,
   stats:            [ScenStats, ScenStats, ScenStats],
+=======
+  lifetimeP50: number,
+  dp50: number,
+  revBaseline: number,
+  revP50: number,
+  revP90: number,
+  gapM_p50: number,
+  gapM_p90: number,
+  gapPct_p50: number,
+  gapPct_p90: number,
+  useFaiman = false,
+  effectiveWindMs = 0,
+>>>>>>> f83c0a7e48d12eefd763fdadb77b8969cc8a5c5d
 ): string {
   const date      = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
   const refId     = park.name.replace(/\s+/g, '-').toUpperCase().slice(0, 8) + '-' + Date.now().toString(36).toUpperCase().slice(-5);
@@ -349,8 +389,24 @@ td:first-child{text-align:left;color:#555}
     </tbody>
   </table>
   <div class="rpt-footer">
+<<<<<<< HEAD
     <div><strong>NviroTrust</strong> &middot; Climate Risk Assessment<br>Scenarios: SSP1-2.6 (+1.5°C) / SSP2-4.5 (+2.5°C) / SSP5-8.5 (+3.5°C) warming by 2055<br>Price assumption: €${PRICE_EUR_PER_MWH}/MWh · Illustrative only — not a financial forecast</div>
     <div style="text-align:right">Generated ${date}<br>Physics: NOCT thermal derating + Arrhenius degradation<br>Climate: CDS/CMIP6 delta method · Park specs: MaStR registry</div>
+=======
+    <div>
+      <strong>NviroTrust</strong> &middot; Climate Risk Assessment<br>
+      Scenario: ${scenario} &middot; +${warmingLevel.toFixed(1)}&deg;C total warming by 2055<br>
+      Price assumption: &euro;${PRICE_EUR_PER_MWH}/MWh &middot; Illustrative only &mdash; not a financial forecast
+    </div>
+    <div style="text-align:right">
+      Generated ${date}<br>
+      Physics: ${useFaiman
+        ? `Faiman wind-cooling model · ERA5 wind ${effectiveWindMs.toFixed(2)} m/s effective · Arrhenius degradation`
+        : 'NOCT thermal derating · Arrhenius degradation'
+      }<br>
+      Climate source: CDS/CMIP6 delta method &middot; Park specs: MaStR registry${useFaiman ? ' &middot; Wind geometry: Microsoft GRW' : ''}
+    </div>
+>>>>>>> f83c0a7e48d12eefd763fdadb77b8969cc8a5c5d
   </div>
 </div></body></html>`;
 }
@@ -358,12 +414,25 @@ td:first-child{text-align:left;color:#555}
 // ── Tooltip ───────────────────────────────────────────────────────────────────
 
 interface TooltipProps {
+<<<<<<< HEAD
   active?: boolean;
   label?:  number;
   data:    MultiRow[];
 }
 
 function ForecastTooltip({ active, label, data }: TooltipProps) {
+=======
+  active?:         boolean;
+  label?:          number;
+  data:            Row[];
+  warmingLevel:    number;
+  useFaiman?:      boolean;
+  windExposure?:   number;
+  effectiveWindMs?: number;
+}
+
+function ForecastTooltip({ active, label, data, warmingLevel, useFaiman, windExposure, effectiveWindMs }: TooltipProps) {
+>>>>>>> f83c0a7e48d12eefd763fdadb77b8969cc8a5c5d
   if (!active || label == null) return null;
   const row = data.find(d => d.year === Number(label));
   if (!row) return null;
@@ -380,6 +449,7 @@ function ForecastTooltip({ active, label, data }: TooltipProps) {
       <div className="prov-baseline">
         Industry standard &nbsp;<strong>{row.baseline.toFixed(1)} GWh/yr</strong>
       </div>
+<<<<<<< HEAD
       {rows.map(({ scen, r }) => (
         <div key={scen.id} className="prov-scenario" style={{ borderLeftColor: scen.line }}>
           <div className="prov-name" style={{ color: scen.line }}>
@@ -392,6 +462,24 @@ function ForecastTooltip({ active, label, data }: TooltipProps) {
             <span>Heat reduces by</span> <span>{Math.abs(r.thermal).toFixed(2)}%</span>
             <span>Panel age loss</span>  <span>−{r.degrad.toFixed(1)}%</span>
           </div>
+=======
+      <div className="prov-scenario" style={{ borderLeftColor: colors.line }}>
+        <div className="prov-name">Climate-adjusted · +{warmingLevel.toFixed(1)}°C by 2055</div>
+        <div className="prov-grid">
+          <span>Expected output</span>            <span>{row.p50.toFixed(1)} GWh/yr</span>
+          <span>Likely range</span>               <span>{row.p90.toFixed(1)} – {row.p10.toFixed(1)} GWh</span>
+          <span>Warming at this year</span>       <span>+{row.dT.toFixed(2)}°C above baseline</span>
+          <span>Heat reduces output by</span>     <span>{Math.abs(row.thermal).toFixed(2)}%</span>
+          <span>Age-related panel decline</span>  <span>−{row.degrad.toFixed(1)}%</span>
+          <span>Weather sampled from</span>       <span>{row.histYear}</span>
+          {useFaiman && effectiveWindMs != null && (
+            <>
+              <span>Wind cooling model</span>     <span>Faiman (U0=25, U1=6.84)</span>
+              <span>Wind exposure (GRW)</span>     <span>{(windExposure ?? 0.75).toFixed(3)} of open-field</span>
+              <span>Effective wind speed</span>   <span>{effectiveWindMs.toFixed(2)} m/s (ERA5 × GRW)</span>
+            </>
+          )}
+>>>>>>> f83c0a7e48d12eefd763fdadb77b8969cc8a5c5d
         </div>
       ))}
     </div>
@@ -401,9 +489,21 @@ function ForecastTooltip({ active, label, data }: TooltipProps) {
 // ── Main component ────────────────────────────────────────────────────────────
 
 export function ParkForecast({ park, onClose }: Props) {
+<<<<<<< HEAD
   const data = useMemo(
     () => buildMultiData(park.capacity, park.risk),
     [park.capacity, park.risk],
+=======
+  const [warmingLevel, setWarmingLevel] = useState(SLIDER_DEFAULT);
+  const [useFaiman,    setUseFaiman]    = useState(false);
+
+  const windBoost     = useFaiman ? faimanBaselineBoost(park.windExposure, park.meanWindMs) : 0;
+  const effectiveWind = park.windExposure * park.meanWindMs;
+
+  const data = useMemo(
+    () => buildWarmingData(park.capacity, park.risk, warmingLevel, windBoost),
+    [park.capacity, park.risk, warmingLevel, windBoost],
+>>>>>>> f83c0a7e48d12eefd763fdadb77b8969cc8a5c5d
   );
 
   const lifetimeBaseline = data.reduce((s, d) => s + d.baseline, 0);
@@ -418,7 +518,17 @@ export function ParkForecast({ park, onClose }: Props) {
   const yMax = Math.ceil(data[0].baseline + 1);
 
   function downloadReport() {
+<<<<<<< HEAD
     const html = generateReportHtml(park, data, lifetimeBaseline, revBaseline, scenStats);
+=======
+    const html = generateReportHtml(
+      park, data, warmingLevel, colors,
+      lifetimeBaseline, lifetimeP50, dp50,
+      revBaseline, revP50, revP90,
+      gapM_p50, gapM_p90, gapPct_p50, gapPct_p90,
+      useFaiman, effectiveWind,
+    );
+>>>>>>> f83c0a7e48d12eefd763fdadb77b8969cc8a5c5d
     const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
     const url  = URL.createObjectURL(blob);
     window.open(url, '_blank');
@@ -479,6 +589,7 @@ export function ParkForecast({ park, onClose }: Props) {
         </div>
       </div>
 
+<<<<<<< HEAD
       {/* ── SSP scenario strip ────────────────────────────── */}
       <div className="ssp-strip">
         {SSP_SCENARIOS.map((scen, i) => {
@@ -496,6 +607,37 @@ export function ParkForecast({ park, onClose }: Props) {
           );
         })}
       </div>
+=======
+      {/* ── Model toggle ─────────────────────────────────── */}
+      <div className="model-toggle-section">
+        <div className="model-toggle-label">Cell temperature model</div>
+        <div className="model-toggle-pills">
+          <button
+            className={`model-pill${!useFaiman ? ' active' : ''}`}
+            onClick={() => setUseFaiman(false)}
+          >
+            Standard · NOCT
+          </button>
+          <button
+            className={`model-pill${useFaiman ? ' active' : ''}`}
+            onClick={() => setUseFaiman(true)}
+          >
+            Satellite · Faiman
+          </button>
+        </div>
+        {useFaiman && (
+          <div className="model-toggle-meta">
+            Wind exposure <strong>{park.windExposure.toFixed(3)}</strong> (Microsoft GRW satellite)
+            &nbsp;×&nbsp; ERA5 {park.meanWindMs.toFixed(2)} m/s
+            &nbsp;=&nbsp; <strong>{effectiveWind.toFixed(2)} m/s effective</strong>
+            &nbsp;→ panels run ~{(faimanBaselineBoost(park.windExposure, park.meanWindMs) * 100).toFixed(1)}% more output vs NOCT
+          </div>
+        )}
+      </div>
+
+      {/* ── Warming slider ────────────────────────────────── */}
+      <WarmingSlider value={warmingLevel} onChange={setWarmingLevel} />
+>>>>>>> f83c0a7e48d12eefd763fdadb77b8969cc8a5c5d
 
       {/* ── Legend ───────────────────────────────────────── */}
       <div className="forecast-legend">
@@ -532,7 +674,19 @@ export function ParkForecast({ park, onClose }: Props) {
               label={{ value: 'GWh/yr', angle: -90, position: 'insideLeft', offset: 14, fontSize: 11, fill: 'var(--text-muted)' }}
             />
             <Tooltip content={(props) => (
+<<<<<<< HEAD
               <ForecastTooltip active={props.active} label={props.label as number} data={data} />
+=======
+              <ForecastTooltip
+                active={props.active}
+                label={props.label as number}
+                data={data}
+                warmingLevel={warmingLevel}
+                useFaiman={useFaiman}
+                windExposure={park.windExposure}
+                effectiveWindMs={effectiveWind}
+              />
+>>>>>>> f83c0a7e48d12eefd763fdadb77b8969cc8a5c5d
             )} />
 
             {/* SSP1-2.6 — blue band + line */}

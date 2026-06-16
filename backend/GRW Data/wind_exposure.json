@@ -1,0 +1,52 @@
+{
+  "Eggebek_Solar_Park": {
+    "grw_area_ha": 127.1,
+    "n_polygons": 2,
+    "wind_exposure": 0.731
+  },
+  "Solarpark_Weesow_Willmersdorf": {
+    "grw_area_ha": 163.4,
+    "n_polygons": 6,
+    "wind_exposure": 0.707
+  },
+  "Solarpark_Gottesgabe_Neuhardenberg": {
+    "grw_area_ha": 122.5,
+    "n_polygons": 3,
+    "wind_exposure": 0.735
+  },
+  "Brandenburg_Briest_Solarpark": {
+    "grw_area_ha": 191.4,
+    "n_polygons": 3,
+    "wind_exposure": 0.693
+  },
+  "Krughuette_Solar_Park": {
+    "grw_area_ha": 44.3,
+    "n_polygons": 7,
+    "wind_exposure": 0.814
+  },
+  "Solarpark_Meuro": {
+    "grw_area_ha": 87.9,
+    "n_polygons": 6,
+    "wind_exposure": 0.765
+  },
+  "Lauingen_Energy_Park": {
+    "grw_area_ha": 66.7,
+    "n_polygons": 3,
+    "wind_exposure": 0.787
+  },
+  "Strasskirchen_Solar_Park": {
+    "grw_area_ha": 118.8,
+    "n_polygons": 10,
+    "wind_exposure": 0.738
+  },
+  "Finsterwalde_Solar_Park": {
+    "grw_area_ha": 176.3,
+    "n_polygons": 4,
+    "wind_exposure": 0.7
+  },
+  "Solarpark_Pocking": {
+    "grw_area_ha": 60.9,
+    "n_polygons": 1,
+    "wind_exposure": 0.793
+  }
+}

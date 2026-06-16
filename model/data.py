@@ -15,6 +15,7 @@ class ParkSpecs:
     tilt: Optional[float] = None  # degrees
     azimuth: Optional[float] = None  # degrees, 0=north, 90=east, 180=south
     commissioned: Optional[int] = None  # year
+    wind_exposure: float = 0.75  # fraction of open-field wind at panel surface (from GRW geometry)
 
 
 @dataclass
@@ -23,14 +24,17 @@ class BaselineWeather:
     ghi: np.ndarray  # W/m², shape (n_hours,), hourly
     temp_amb: np.ndarray  # °C, shape (n_hours,), hourly
     # Assumption: 8760 h/yr; n_hours = 8760 * n_years for interannual sampling
+    mean_wind_speed: float = 4.0  # m/s, ERA5 mean wind_speed_10m; used by Faiman model only
 
 
 @dataclass
 class ClimateDeltas:
     """Temperature change projections from climate models (delta method)."""
-    scenario: str  # "SSP1-2.6" | "SSP2-4.5" | "SSP5-8.5"
+    scenario: str  # "RCP2.6" | "RCP4.5" | "RCP8.5"
     dT_per_year: np.ndarray  # °C, shape (n_years,), added to baseline temp each year
     dT_model_std: np.ndarray  # °C, shape (n_years,), ensemble spread per year
+    source: str = ""  # provenance: where the ΔT signal came from
+    std_source: str = ""  # provenance: where dT_model_std came from
 
 
 @dataclass

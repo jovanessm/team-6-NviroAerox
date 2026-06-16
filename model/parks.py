@@ -19,6 +19,7 @@ ALL_PARKS: list[ParkSpecs] = [
         azimuth=180.0,             # Süd
         tilt=12.0,                 # midpoint of 5–20° range
         commissioned=2025,
+        wind_exposure=0.731,       # GRW: 127.1 ha across 2 polygons
     ),
     ParkSpecs(
         name="Solarpark_Weesow_Willmersdorf",
@@ -28,6 +29,7 @@ ALL_PARKS: list[ParkSpecs] = [
         azimuth=180.0,             # Süd
         tilt=30.0,                 # midpoint of 21–40° range
         commissioned=2021,
+        wind_exposure=0.707,       # GRW: 163.4 ha across 6 polygons
     ),
     ParkSpecs(
         name="Solarpark_Gottesgabe_Neuhardenberg",
@@ -37,6 +39,7 @@ ALL_PARKS: list[ParkSpecs] = [
         azimuth=180.0,             # Süd
         tilt=30.0,                 # midpoint of 21–40° range
         commissioned=2012,
+        wind_exposure=0.735,       # GRW: 122.5 ha across 3 polygons
     ),
     ParkSpecs(
         name="Brandenburg_Briest_Solarpark",
@@ -46,6 +49,7 @@ ALL_PARKS: list[ParkSpecs] = [
         azimuth=180.0,             # Süd
         tilt=30.0,                 # midpoint of 21–40° range
         commissioned=2024,
+        wind_exposure=0.693,       # GRW: 191.4 ha across 3 polygons
     ),
     ParkSpecs(
         name="Krughuette_Solar_Park",
@@ -55,6 +59,7 @@ ALL_PARKS: list[ParkSpecs] = [
         azimuth=180.0,             # Süd
         tilt=12.0,                 # midpoint of 5–20° range
         commissioned=2023,
+        wind_exposure=0.814,       # GRW: 44.3 ha across 7 polygons
     ),
     ParkSpecs(
         name="Solarpark_Meuro",
@@ -64,6 +69,7 @@ ALL_PARKS: list[ParkSpecs] = [
         azimuth=180.0,             # Süd
         tilt=30.0,                 # midpoint of 21–40° range
         commissioned=2021,
+        wind_exposure=0.765,       # GRW: 87.9 ha across 6 polygons
     ),
     # Ernsthof_Solar_Park EXCLUDED — MaStR SEE974150665368 is a rooftop
     # (Gebäudesolaranlage, 192 kWp). Our model targets Freiflächensolaranlagen.
@@ -77,6 +83,7 @@ ALL_PARKS: list[ParkSpecs] = [
         azimuth=180.0,             # primary Süd; secondary Süd-West omitted (minor)
         tilt=12.0,                 # midpoint of 5–20° range
         commissioned=2024,
+        wind_exposure=0.787,       # GRW: 66.7 ha across 3 polygons
     ),
     ParkSpecs(
         name="Strasskirchen_Solar_Park",
@@ -86,6 +93,7 @@ ALL_PARKS: list[ParkSpecs] = [
         azimuth=180.0,             # Süd
         tilt=12.0,                 # midpoint of 5–20° range
         commissioned=2025,
+        wind_exposure=0.738,       # GRW: 118.8 ha across 10 polygons
     ),
     ParkSpecs(
         name="Finsterwalde_Solar_Park",
@@ -94,6 +102,7 @@ ALL_PARKS: list[ParkSpecs] = [
         capacity_kwp=9_251.76,    # MaStR SEE901235278670 "Solarpark Finsterwalde I BA 2"
         azimuth=180.0,             # Süd
         tilt=30.0,                 # midpoint of 21–40° range
+        wind_exposure=0.700,       # GRW: 176.3 ha across 4 polygons
     ),
     ParkSpecs(
         name="Solarpark_Pocking",
@@ -103,6 +112,7 @@ ALL_PARKS: list[ParkSpecs] = [
         azimuth=180.0,             # Süd
         tilt=12.0,                 # midpoint of 5–20° range
         commissioned=2024,
+        wind_exposure=0.793,       # GRW: 60.9 ha across 1 polygon
     ),
 ]
 
