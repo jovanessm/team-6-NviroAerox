@@ -884,7 +884,7 @@ export function ParkForecast({ park, onClose }: Props) {
           {hasOpex && (
             <div className="opex-result">
               <div className="opex-result-header">
-                <span className="opex-result-title">Net profit over 30 years (NPV)</span>
+                <span className="opex-result-title">PV of CFs ex. initial investment</span>
                 <span className="opex-30yr-total">
                   Nominal costs: <strong>€{opex30yr.toFixed(1)}M</strong>
                   &nbsp;·&nbsp; NPV @ 6%: <strong>€{opexNPV.toFixed(1)}M</strong>
@@ -903,7 +903,7 @@ export function ParkForecast({ park, onClose }: Props) {
                   <span>−{fmtRev(opexNPV)}</span>
                 </div>
                 <div className={`opex-calc-row opex-calc-total ${(s2.npvP50 - opexNPV) >= 0 ? 'opex-pos' : 'opex-neg'}`}>
-                  <span>Net NPV (P50 · SSP2-4.5)</span>
+                  <span>PV of CFs ex. initial investment (P50 · SSP2-4.5)</span>
                   <span>{(s2.npvP50 - opexNPV) >= 0 ? '' : '−'}{fmtRev(Math.abs(s2.npvP50 - opexNPV))}</span>
                 </div>
               </div>
