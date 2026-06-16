@@ -1,71 +1,35 @@
 import { useState, useMemo } from 'react';
+import { PARKS } from '../data/parks';
 import './Portfolio.css';
 
-// ── Park data + physics ───────────────────────────────────────────────────────
+// ── Derive portfolio rows from real precomputed data (RCP4.5 = SSP2-4.5) ─────
 
-const PRICE       = 74;    // €/MWh
-const SSP245_WARM = 2.5;   // °C total by 2055 — SSP2-4.5 "middle road"
-
-interface RawPark {
-  name:     string;
-  state:    string;
-  capacity: number;
-  risk:     number;
-}
-
-const RAW_PARKS: RawPark[] = [
-  { name: 'Eggebek Solar Park',                 state: 'Schleswig-Holstein',  capacity: 65,  risk: 5.4 },
-  { name: 'Solarpark Weesow-Willmersdorf',      state: 'Brandenburg',          capacity: 187, risk: 7.2 },
-  { name: 'Solarpark Gottesgabe Neuhardenberg', state: 'Brandenburg',          capacity: 84,  risk: 7.0 },
-  { name: 'Brandenburg Briest Solarpark',       state: 'Brandenburg',          capacity: 91,  risk: 7.1 },
-  { name: 'Finsterwalde Solar Park',            state: 'Brandenburg',          capacity: 80,  risk: 7.4 },
-  { name: 'Krughuette Solar Park',              state: 'Saxony-Anhalt',        capacity: 52,  risk: 6.8 },
-  { name: 'Solarpark Meuro',                    state: 'Brandenburg / Saxony', capacity: 166, risk: 7.3 },
-  { name: 'Ernsthof Solar Park',                state: 'Baden-Württemberg',    capacity: 70,  risk: 6.5 },
-  { name: 'Lauingen Energy Park',               state: 'Bavaria',              capacity: 25,  risk: 6.3 },
-  { name: 'Strasskirchen Solar Park',           state: 'Bavaria',              capacity: 54,  risk: 6.2 },
-  { name: 'Solarpark Pocking',                  state: 'Bavaria',              capacity: 50,  risk: 6.4 },
-];
-
-interface ParkRow extends RawPark {
+interface ParkRow {
+  name:        string;
+  state:       string;
+  capacity:    number; // MWp
+  risk:        number;
   baseline:    number; // 30-yr GWh (industry standard)
-  adjusted:    number; // 30-yr GWh climate-adjusted
-  lossPct:     number; // % vs baseline
-  revenueGap:  number; // €M vs baseline
+  adjusted:    number; // 30-yr GWh P50 climate-adjusted
+  lossPct:     number; // % delta vs baseline
+  revenueGap:  number; // €M gap
   revBaseline: number; // €M baseline revenue
 }
 
-function computeStats(park: RawPark, totalWarming: number): ParkRow {
-  const BASE       = park.capacity * 0.95;
-  const dTperYear  = totalWarming / 30;
-  const riskFactor = 1 + (park.risk - 5.5) * 0.03;
-  let lifetimeBase = 0;
-  let lifetimeP50  = 0;
-
-  for (let yr = 1; yr <= 30; yr++) {
-    const deg      = Math.pow(1 - 0.005, yr - 1);
-    const baseline = BASE * deg;
-    const dT       = dTperYear * yr;
-    const loss     = (-0.004 * dT - 0.00008 * dT * dT) * riskFactor;
-    lifetimeBase += baseline;
-    lifetimeP50  += baseline * (1 + loss);
-  }
-
-  const revBase = (lifetimeBase * PRICE * 1000) / 1e6;
-  const revP50  = (lifetimeP50  * PRICE * 1000) / 1e6;
-
+const ALL_ROWS: ParkRow[] = PARKS.map(p => {
+  const s = p.scenarios['RCP4.5'];
   return {
-    ...park,
-    baseline:    lifetimeBase,
-    adjusted:    lifetimeP50,
-    lossPct:     (lifetimeP50 - lifetimeBase) / lifetimeBase * 100,
-    revenueGap:  revP50 - revBase,
-    revBaseline: revBase,
+    name:        p.name,
+    state:       p.state,
+    capacity:    p.capacity_mwp,
+    risk:        p.risk,
+    baseline:    s.lifetime_baseline_gwh,
+    adjusted:    s.lifetime_p50_gwh,
+    lossPct:     s.delta_pct,
+    revenueGap:  s.finance.revenue_gap_meur,
+    revBaseline: s.finance.lifetime_baseline_meur,
   };
-}
-
-// Pre-compute once at module level — these never change
-const ALL_ROWS: ParkRow[] = RAW_PARKS.map(p => computeStats(p, SSP245_WARM));
+});
 
 // ── Sort + filter helpers ─────────────────────────────────────────────────────
 
@@ -184,7 +148,7 @@ export function Portfolio() {
         <div>
           <h1>Portfolio Risk Overview</h1>
           <p>
-            All 11 solar parks ranked by climate exposure at <strong>+2.5°C by 2055</strong> — the
+            All {ALL_ROWS.length} solar parks ranked by climate exposure at <strong>+2.5°C by 2055</strong> — the
             SSP2-4.5 "middle road" scenario. Click any column header to re-sort.
           </p>
         </div>
@@ -285,8 +249,8 @@ export function Portfolio() {
 
       {/* ── Footer note ──────────────────────────────────── */}
       <p className="portfolio-note">
-        Scenario: SSP2-4.5 · +2.5°C total warming by 2055 · Price assumption €{PRICE}/MWh ·
-        Output loss uses deterministic P50 — open a park in Analyze for the full uncertainty fan.
+        Scenario: SSP2-4.5 / RCP4.5 · 3,000 Monte Carlo draws · Price: SMARD day-ahead mean ·
+        Output loss = P50 climate-adjusted vs industry baseline — open a park in Analyze for the full uncertainty fan.
       </p>
 
     </div>

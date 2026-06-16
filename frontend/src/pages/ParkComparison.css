@@ -106,12 +106,12 @@
   margin-bottom: 1.5rem;
 }
 
-/* ── Shared warming slider ───────────────────────────────────────────────── */
+/* ── Shared scenario picker ──────────────────────────────────────────────── */
 .cmp-warming {
   background: var(--slate-50);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 1rem 1.25rem 1.625rem;
+  padding: 1rem 1.25rem 1.25rem;
   margin-bottom: 1.5rem;
 }
 
@@ -130,77 +130,45 @@
   letter-spacing: 0.05em;
 }
 
-.cmp-warming-val {
-  font-size: 1.375rem;
-  font-weight: 700;
-  letter-spacing: -0.03em;
-  font-variant-numeric: tabular-nums;
-  transition: color 0.2s;
+.cmp-ssp-tabs {
+  display: flex;
+  gap: 0.625rem;
 }
 
-.cmp-warming-track-wrap {
-  position: relative;
-  padding-bottom: 2.25rem;
-}
-
-.cmp-warming-slider {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 100%;
-  height: 6px;
-  border-radius: 99px;
-  background: linear-gradient(
-    to right,
-    var(--w-color, #3b82f6) 0%,
-    var(--w-color, #3b82f6) var(--w-pct, 43%),
-    var(--border) var(--w-pct, 43%),
-    var(--border) 100%
-  );
-  outline: none;
-  cursor: pointer;
-}
-
-.cmp-warming-slider::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  width: 20px; height: 20px;
-  border-radius: 50%;
-  background: white;
-  border: 2.5px solid var(--w-color, #3b82f6);
-  box-shadow: 0 1px 4px rgba(0,0,0,0.15);
-  cursor: pointer;
-  transition: transform 0.1s;
-}
-
-.cmp-warming-slider::-webkit-slider-thumb:hover { transform: scale(1.12); }
-.cmp-warming-slider::-moz-range-thumb {
-  width: 20px; height: 20px;
-  border-radius: 50%;
-  background: white;
-  border: 2.5px solid var(--w-color, #3b82f6);
-  box-shadow: 0 1px 4px rgba(0,0,0,0.15);
-}
-
-.cmp-warming-marks {
-  position: absolute;
-  top: 14px;
-  left: 0; right: 0;
-}
-
-.cmp-mark {
-  position: absolute;
-  transform: translateX(-50%);
+.cmp-ssp-tab {
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  gap: 0.125rem;
+  padding: 0.625rem 1rem;
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+  color: var(--text-secondary);
 }
 
-.cmp-mark-tick  { width: 1px; height: 6px; background: var(--slate-400); }
-.cmp-mark-label { font-size: 0.675rem; font-weight: 600; color: var(--text-muted); white-space: nowrap; }
-.cmp-mark-sub   { font-size: 0.65rem; color: var(--slate-400); white-space: nowrap; }
+.cmp-ssp-tab:hover {
+  border-color: var(--slate-400);
+  color: var(--text-primary);
+}
 
-.cmp-mark.active .cmp-mark-label,
-.cmp-mark.active .cmp-mark-sub { color: var(--text-primary); font-weight: 700; }
+.cmp-ssp-tab.active { font-weight: 600; }
+
+.tab-label {
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.tab-name {
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
 
 /* ── Side-by-side charts ─────────────────────────────────────────────────── */
 .compare-charts {
