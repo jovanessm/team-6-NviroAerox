@@ -785,16 +785,6 @@ export function ParkForecast({ park, onClose }: Props) {
                 </tr>
               </thead>
               <tbody>
-                <tr>
-                  <td className="row-label">
-                    Nominal revenue (P50)
-                    <span className="fin-row-hint">undiscounted 30-yr sum</span>
-                  </td>
-                  <td>{fmtRev(s2.revBaseline)}</td>
-                  {activePark.hasRcp26 && <td>{fmtRev(s1.revP50)}</td>}
-                  <td>{fmtRev(s2.revP50)}</td>
-                  <td>{fmtRev(s3.revP50)}</td>
-                </tr>
                 <tr className="fin-tr-highlight">
                   <td className="row-label">
                     <Term tip="Present Value of Cash Flows: future revenues discounted at 6% WACC (typical German utility-scale solar project finance rate). Year 30 cash flows are worth ~17 cents today — PV of CFs is what lenders actually underwrite.">PV of CFs (P50 · 6% WACC)</Term>
@@ -807,24 +797,7 @@ export function ParkForecast({ park, onClose }: Props) {
                 </tr>
                 <tr>
                   <td className="row-label">
-                    NPV shortfall vs industry
-                    <span className="fin-row-hint">discounted gap a lender would underwrite</span>
-                  </td>
-                  <td className="em-dash">—</td>
-                  {activePark.hasRcp26 && <td className="gap-neg">{s1.npvGap < 0 ? '−' : '+'}€{Math.abs(s1.npvGap).toFixed(1)}M</td>}
-                  <td className="gap-neg">{s2.npvGap < 0 ? '−' : '+'}€{Math.abs(s2.npvGap).toFixed(1)}M</td>
-                  <td className="gap-neg">{s3.npvGap < 0 ? '−' : '+'}€{Math.abs(s3.npvGap).toFixed(1)}M</td>
-                </tr>
-                <tr>
-                  <td className="row-label">Nominal shortfall vs industry</td>
-                  <td className="em-dash">—</td>
-                  {activePark.hasRcp26 && <td className="gap-neg">{s1.gapM < 0 ? '−' : '+'}€{Math.abs(s1.gapM).toFixed(1)}M ({Math.abs(s1.gapPct).toFixed(2)}%)</td>}
-                  <td className="gap-neg">{s2.gapM < 0 ? '−' : '+'}€{Math.abs(s2.gapM).toFixed(1)}M ({Math.abs(s2.gapPct).toFixed(2)}%)</td>
-                  <td className="gap-neg">{s3.gapM < 0 ? '−' : '+'}€{Math.abs(s3.gapM).toFixed(1)}M ({Math.abs(s3.gapPct).toFixed(2)}%)</td>
-                </tr>
-                <tr>
-                  <td className="row-label">
-                    Downside NPV (P10)
+                    Downside PV (P10)
                     <span className="fin-row-hint">worst-case 10th pct — 90% exceedance</span>
                   </td>
                   <td className="em-dash">—</td>
