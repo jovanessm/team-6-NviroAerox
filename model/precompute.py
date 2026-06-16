@@ -1,18 +1,23 @@
 """
 Pre-compute simulation results for all solar parks.
 
-Runs simulate() for all parks × RCP2.6 / RCP4.5 / RCP8.5 and saves one JSON file
-to backend/precomputed.json so the API can serve results instantly.
+Runs simulate() for all parks × scenarios and saves one JSON per (climate, model)
+combo to backend/precomputed_{climate}_{model}.json so the API serves instantly.
 
-ΔT signal comes from the CMIP6 7-model ensemble (Open-Meteo HighResMIP, cached
-to backend/cmip6_cache/). ERA5 provides the baseline weather. The EnviroTrust
-daily-max-temp and wildfire fields are NOT used — both are annual extremes with
-no usable trend (see model/cmip6.py).
+Two climate ΔT sources:
+  - cmip6 (default): CMIP6 7-model ensemble (Open-Meteo HighResMIP, cached to
+    backend/cmip6_cache/) → RCP2.6 / RCP4.5 / RCP8.5.
+  - envirotrust: EnviroTrust daily-max-temperature field → RCP4.5 / RCP8.5 only,
+    with the trend forced to a warming direction (see model/envirotrust.py — this
+    is an explicit source-comparison choice, stamped into provenance).
+Two cell-temperature models: noct (default) and faiman (uses wind). ERA5 provides
+the baseline weather in every combo, so only the ΔT source / physics model differ.
 
 Usage:
-    python -m model.precompute
-    python -m model.precompute --output path/to/output.json
-    python -m model.precompute --dry-run   # validate ERA5 + CMIP6 without full MC
+    python -m model.precompute                          # cmip6 × noct
+    python -m model.precompute --climate envirotrust --model faiman
+    python -m model.precompute --all                    # all 4 combos
+    python -m model.precompute --dry-run                # validate inputs, no MC
 """
 
 import sys
@@ -35,15 +40,23 @@ load_dotenv(Path(__file__).parent.parent / "backend" / ".env")
 from model.parks import ALL_PARKS
 from model.data import ParkSpecs, BaselineWeather
 from model.cmip6 import fetch_ensemble_annual, build_all_scenarios_cmip6, heat_tail_from_deltas
+from model.envirotrust import build_all_scenarios_envirotrust
 from model.montecarlo import simulate
 from model.finance import energy_to_revenue, format_for_ui
 from model.config import LIFETIME_YEARS
 
-ERA5_DIR = Path(__file__).parent.parent / "backend" / "CDS Data" / "era5_data"
-DEFAULT_OUTPUT = Path(__file__).parent.parent / "backend" / "precomputed.json"
-FAIMAN_OUTPUT = Path(__file__).parent.parent / "backend" / "precomputed_faiman.json"
-CMIP6_CACHE_DIR = Path(__file__).parent.parent / "backend" / "cmip6_cache"
-GRW_DIR = Path(__file__).parent.parent / "backend" / "GRW Data"
+BACKEND_DIR = Path(__file__).parent.parent / "backend"
+ERA5_DIR = BACKEND_DIR / "CDS Data" / "era5_data"
+CMIP6_CACHE_DIR = BACKEND_DIR / "cmip6_cache"
+GRW_DIR = BACKEND_DIR / "GRW Data"
+
+CLIMATE_SOURCES = ["cmip6", "envirotrust"]
+CELL_TEMP_MODELS = ["noct", "faiman"]
+
+
+def output_path_for(climate: str, model: str) -> Path:
+    """backend/precomputed_{climate}_{model}.json — the 4-file symmetric scheme."""
+    return BACKEND_DIR / f"precomputed_{climate}_{model}.json"
 
 
 def load_baseline(park_name: str, mean_wind_speed: float = 4.0) -> BaselineWeather | None:
@@ -96,7 +109,8 @@ def prediction_to_dict(pred, finance: dict) -> dict:
     }
 
 
-def run(output_path: Path, dry_run: bool = False, n_draws: int = 3000, use_faiman: bool = False) -> None:
+def run(output_path: Path, dry_run: bool = False, n_draws: int = 3000,
+        use_faiman: bool = False, climate: str = "cmip6") -> None:
     wind_speeds = load_wind_speeds() if use_faiman else {}
     if use_faiman:
         if not wind_speeds:
@@ -140,25 +154,33 @@ def run(output_path: Path, dry_run: bool = False, n_draws: int = 3000, use_faima
         mean_temp = float(np.mean(baseline.temp_amb))
         print(f"  ERA5: {n_hours:,} hours ({n_hours/8760:.1f} yr), mean temp {mean_temp:.1f}°C")
 
-        # CMIP6 7-model ensemble (Open-Meteo HighResMIP) → ΔT signal + model spread
-        cache_path = CMIP6_CACHE_DIR / f"{park.name}.json"
-        try:
-            ensemble = fetch_ensemble_annual(park.lat, park.lon, cache_path)
-        except Exception as e:
-            print(f"  SKIP — CMIP6 fetch error: {e}")
-            skipped.append(park.name)
-            continue
-        if len(ensemble) < 3:
-            print(f"  SKIP — only {len(ensemble)} CMIP6 models returned")
-            skipped.append(park.name)
-            continue
-        if not cache_path.exists():
-            time.sleep(3)  # be polite to the API on a fresh fetch
+        # ΔT signal source: CMIP6 ensemble (default) or EnviroTrust daily-max field
+        if climate == "envirotrust":
+            try:
+                scenarios = build_all_scenarios_envirotrust(park.lat, park.lon, n_years=LIFETIME_YEARS)
+            except Exception as e:
+                print(f"  SKIP — EnviroTrust fetch error: {e}")
+                skipped.append(park.name)
+                continue
+        else:
+            # CMIP6 7-model ensemble (Open-Meteo HighResMIP) → ΔT signal + model spread
+            cache_path = CMIP6_CACHE_DIR / f"{park.name}.json"
+            try:
+                ensemble = fetch_ensemble_annual(park.lat, park.lon, cache_path)
+            except Exception as e:
+                print(f"  SKIP — CMIP6 fetch error: {e}")
+                skipped.append(park.name)
+                continue
+            if len(ensemble) < 3:
+                print(f"  SKIP — only {len(ensemble)} CMIP6 models returned")
+                skipped.append(park.name)
+                continue
+            if not cache_path.exists():
+                time.sleep(3)  # be polite to the API on a fresh fetch
+            scenarios = build_all_scenarios_cmip6(ensemble, n_years=LIFETIME_YEARS)
 
-        scenarios = build_all_scenarios_cmip6(ensemble, n_years=LIFETIME_YEARS)
         warming = {n: d.dT_per_year[-1] for n, d in scenarios.items()}
-        print(f"  CMIP6: {len(ensemble)} models, 30yr warming "
-              f"RCP2.6={warming['RCP2.6']:+.2f} RCP4.5={warming['RCP4.5']:+.2f} RCP8.5={warming['RCP8.5']:+.2f}°C")
+        print(f"  {climate}: 30yr warming " + " ".join(f"{n}={v:+.2f}" for n, v in warming.items()) + "°C")
 
         if dry_run:
             print(f"  DRY RUN — skipping simulate() ({LIFETIME_YEARS} years, {list(scenarios.keys())})")
@@ -205,16 +227,27 @@ def run(output_path: Path, dry_run: bool = False, n_draws: int = 3000, use_faima
 def main():
     parser = argparse.ArgumentParser(description="Pre-compute solar park simulations.")
     parser.add_argument("--output", type=Path, default=None,
-                        help="Output JSON path (default: precomputed.json or precomputed_faiman.json)")
-    parser.add_argument("--model", choices=["noct", "faiman"], default="noct",
+                        help="Output JSON path (default: precomputed_{climate}_{model}.json). Ignored with --all.")
+    parser.add_argument("--climate", choices=CLIMATE_SOURCES, default="cmip6",
+                        help="ΔT source: cmip6 (default, 3 scenarios) or envirotrust (RCP4.5/8.5 only)")
+    parser.add_argument("--model", choices=CELL_TEMP_MODELS, default="noct",
                         help="Cell temperature model: noct (default) or faiman (requires wind data)")
+    parser.add_argument("--all", action="store_true",
+                        help="Build all 4 combos (cmip6/envirotrust × noct/faiman) in one run")
     parser.add_argument("--dry-run", action="store_true", help="Validate data without running MC")
     parser.add_argument("--draws", type=int, default=3000, help="MC draws per scenario (default 3000)")
     args = parser.parse_args()
 
-    use_faiman = args.model == "faiman"
-    output_path = args.output or (FAIMAN_OUTPUT if use_faiman else DEFAULT_OUTPUT)
-    run(output_path, dry_run=args.dry_run, n_draws=args.draws, use_faiman=use_faiman)
+    if args.all:
+        combos = [(c, m) for c in CLIMATE_SOURCES for m in CELL_TEMP_MODELS]
+    else:
+        combos = [(args.climate, args.model)]
+
+    for climate, model in combos:
+        output_path = args.output if (args.output and not args.all) else output_path_for(climate, model)
+        print(f"\n========== {climate} × {model} → {output_path.name} ==========")
+        run(output_path, dry_run=args.dry_run, n_draws=args.draws,
+            use_faiman=(model == "faiman"), climate=climate)
 
 
 if __name__ == "__main__":

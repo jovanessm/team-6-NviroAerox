@@ -4,8 +4,15 @@ from fastapi import FastAPI, Query, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from EnviroTrustAPI import EnviroTrustClient
 
-PRECOMPUTED_PATH = Path(__file__).parent / "precomputed.json"
-PRECOMPUTED_FAIMAN_PATH = Path(__file__).parent / "precomputed_faiman.json"
+CLIMATE_SOURCES = ("cmip6", "envirotrust")
+CELL_TEMP_MODELS = ("noct", "faiman")
+
+# 4 precomputed outputs, keyed by (climate, model)
+PRECOMPUTED_PATHS = {
+    (climate, model): Path(__file__).parent / f"precomputed_{climate}_{model}.json"
+    for climate in CLIMATE_SOURCES
+    for model in CELL_TEMP_MODELS
+}
 
 
 def _load_precomputed(path: Path) -> dict:
@@ -15,16 +22,13 @@ def _load_precomputed(path: Path) -> dict:
         return json.load(f)
 
 
-# Load both models at startup; serve from memory
-_data_noct = _load_precomputed(PRECOMPUTED_PATH)
-_data_faiman = _load_precomputed(PRECOMPUTED_FAIMAN_PATH)
+# Load all four (climate × model) datasets at startup; serve from memory
+_data = {key: _load_precomputed(path) for key, path in PRECOMPUTED_PATHS.items()}
+_indexes: dict = {key: {p["id"]: p for p in d.get("parks", [])} for key, d in _data.items()}
 
-_parks_noct: dict = {p["id"]: p for p in _data_noct.get("parks", [])}
-_parks_faiman: dict = {p["id"]: p for p in _data_faiman.get("parks", [])}
-
-# Fallback for park listing: prefer NOCT, fall back to Faiman if only that exists
-_data = _data_noct if _data_noct else _data_faiman
-_parks_index = _parks_noct if _parks_noct else _parks_faiman
+# Fallback for park listing: prefer CMIP6 × NOCT, else the first non-empty dataset
+_default_data = _data.get(("cmip6", "noct")) or next((d for d in _data.values() if d), {})
+_default_index = _indexes.get(("cmip6", "noct")) or next((i for i in _indexes.values() if i), {})
 
 
 app = FastAPI(
@@ -50,7 +54,12 @@ client = EnviroTrustClient()
 
 @app.get("/")
 def root():
-    return {"status": "ok", "parks_loaded": len(_parks_index), "docs": "/docs"}
+    return {
+        "status": "ok",
+        "parks_loaded": len(_default_index),
+        "datasets": {f"{c}_{m}": len(_indexes[(c, m)]) for (c, m) in PRECOMPUTED_PATHS},
+        "docs": "/docs",
+    }
 
 
 # ── Pre-computed prediction endpoints ─────────────────────────────────────────
@@ -67,14 +76,14 @@ def list_parks():
             "capacity_kwp": p["capacity_kwp"],
             "commissioned": p.get("commissioned"),
         }
-        for p in _data.get("parks", [])
+        for p in _default_data.get("parks", [])
     ]
 
 
 @app.get("/api/parks/{park_id}")
 def get_park(park_id: str):
     """Single park metadata."""
-    park = _parks_index.get(park_id)
+    park = _default_index.get(park_id)
     if not park:
         raise HTTPException(status_code=404, detail=f"Park '{park_id}' not found")
     return {k: v for k, v in park.items() if k != "scenarios"}
@@ -83,24 +92,31 @@ def get_park(park_id: str):
 @app.post("/api/predict")
 def predict(body: dict):
     """
-    Return pre-computed prediction for a park + scenario + model.
+    Return pre-computed prediction for a park + scenario + climate source + model.
 
-    Body: {"parkId": "Eggebek_Solar_Park", "scenario": "RCP4.5", "model": "noct"}
+    Body: {"parkId": "Eggebek_Solar_Park", "scenario": "RCP4.5",
+           "climate": "cmip6", "model": "noct"}
     - scenario defaults to "RCP4.5"
+    - climate: "cmip6" (default, CMIP6 ensemble; RCP2.6/4.5/8.5) or
+               "envirotrust" (EnviroTrust daily-max field; RCP4.5/8.5 only)
     - model: "noct" (default, standard NOCT T_cell) or "faiman" (Faiman + satellite wind)
     """
     park_id = body.get("parkId") or body.get("park_id")
     scenario = body.get("scenario", "RCP4.5")
+    climate = body.get("climate", "cmip6").lower()
     model = body.get("model", "noct").lower()
 
-    if model not in ("noct", "faiman"):
-        raise HTTPException(status_code=400, detail=f"model must be 'noct' or 'faiman'")
+    if climate not in CLIMATE_SOURCES:
+        raise HTTPException(status_code=400, detail=f"climate must be one of {list(CLIMATE_SOURCES)}")
+    if model not in CELL_TEMP_MODELS:
+        raise HTTPException(status_code=400, detail=f"model must be one of {list(CELL_TEMP_MODELS)}")
 
-    parks_index = _parks_faiman if model == "faiman" else _parks_noct
+    parks_index = _indexes.get((climate, model), {})
     if not parks_index:
         raise HTTPException(
             status_code=503,
-            detail=f"precomputed_{model}.json not found — run: python -m model.precompute --model {model}",
+            detail=(f"precomputed_{climate}_{model}.json not found — run: "
+                    f"python -m model.precompute --climate {climate} --model {model}"),
         )
 
     park = parks_index.get(park_id)
@@ -119,6 +135,7 @@ def predict(body: dict):
         "parkId": park_id,
         "parkName": park["name"],
         "scenario": scenario,
+        "climate": climate,
         "model": model,
         "lat": park["lat"],
         "lon": park["lon"],
@@ -131,10 +148,11 @@ def predict(body: dict):
 def predict_get(
     park_id: str,
     scenario: str = Query("RCP4.5"),
+    climate: str = Query("cmip6", description="'cmip6' or 'envirotrust'"),
     model: str = Query("noct", description="'noct' or 'faiman'"),
 ):
     """GET variant of /api/predict for browser-friendly access."""
-    return predict({"parkId": park_id, "scenario": scenario, "model": model})
+    return predict({"parkId": park_id, "scenario": scenario, "climate": climate, "model": model})
 
 
 @app.get("/api/heat-wind/timeseries")

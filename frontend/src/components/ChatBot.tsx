@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { PARKS } from '../data/parks';
 import './ChatBot.css';
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -16,23 +17,41 @@ interface Chat {
   updatedAt: number;
 }
 
-// ── Park data for mock responses ─────────────────────────────────────────────
+// ── Park data derived from real precomputed output ────────────────────────────
 
-const PRICE_EUR_PER_MWH = 74;
+interface ChatPark {
+  key:              string;
+  name:             string;
+  state:            string;
+  capacity:         number;
+  gwh:              number; // annual baseline GWh
+  d245:             number; // RCP4.5 delta_pct
+  d585:             number; // RCP8.5 delta_pct
+  risk:             number;
+  rev_baseline:     number; // lifetime baseline €M
+  gap_245:          number; // revenue gap €M at RCP4.5
+  gap_585:          number; // revenue gap €M at RCP8.5
+  price_label:      string;
+}
 
-const PARK_DATA = [
-  { key: 'eggebek',       name: 'Eggebek Solar Park',                 state: 'Schleswig-Holstein',  capacity: 65,  gwh: 58.2,  d245: -1.8, d585: -3.1, risk: 5.4 },
-  { key: 'weesow',        name: 'Solarpark Weesow-Willmersdorf',      state: 'Brandenburg',          capacity: 187, gwh: 175.3, d245: -2.1, d585: -3.6, risk: 7.2 },
-  { key: 'gottesgabe',    name: 'Solarpark Gottesgabe Neuhardenberg', state: 'Brandenburg',          capacity: 84,  gwh: 78.8,  d245: -2.0, d585: -3.4, risk: 7.0 },
-  { key: 'briest',        name: 'Brandenburg Briest Solarpark',       state: 'Brandenburg',          capacity: 91,  gwh: 85.4,  d245: -2.2, d585: -3.7, risk: 7.1 },
-  { key: 'finsterwalde',  name: 'Finsterwalde Solar Park',            state: 'Brandenburg',          capacity: 80,  gwh: 76.0,  d245: -2.3, d585: -3.8, risk: 7.4 },
-  { key: 'krughuette',    name: 'Krughuette Solar Park',              state: 'Saxony-Anhalt',        capacity: 52,  gwh: 49.4,  d245: -2.0, d585: -3.3, risk: 6.8 },
-  { key: 'meuro',         name: 'Solarpark Meuro',                    state: 'Brandenburg / Saxony', capacity: 166, gwh: 157.5, d245: -2.2, d585: -3.6, risk: 7.3 },
-  { key: 'ernsthof',      name: 'Ernsthof Solar Park',                state: 'Baden-Württemberg',    capacity: 70,  gwh: 70.0,  d245: -1.9, d585: -3.2, risk: 6.5 },
-  { key: 'lauingen',      name: 'Lauingen Energy Park',               state: 'Bavaria',              capacity: 25,  gwh: 25.5,  d245: -1.8, d585: -3.0, risk: 6.3 },
-  { key: 'strasskirchen', name: 'Strasskirchen Solar Park',           state: 'Bavaria',              capacity: 54,  gwh: 55.1,  d245: -1.7, d585: -2.9, risk: 6.2 },
-  { key: 'pocking',       name: 'Solarpark Pocking',                  state: 'Bavaria',              capacity: 50,  gwh: 51.0,  d245: -1.8, d585: -3.0, risk: 6.4 },
-];
+const PARK_DATA: ChatPark[] = PARKS.map(p => {
+  const s245 = p.scenarios['RCP4.5'];
+  const s585 = p.scenarios['RCP8.5'];
+  return {
+    key:          p.id.toLowerCase(),
+    name:         p.name,
+    state:        p.state,
+    capacity:     p.capacity_mwp,
+    gwh:          +(s245.lifetime_baseline_gwh / 30).toFixed(1),
+    d245:         s245.delta_pct,
+    d585:         s585.delta_pct,
+    risk:         p.risk,
+    rev_baseline: s245.finance.lifetime_baseline_meur,
+    gap_245:      s245.finance.revenue_gap_meur,
+    gap_585:      s585.finance.revenue_gap_meur,
+    price_label:  s245.finance.price_assumption,
+  };
+});
 
 const SUGGESTIONS = [
   'What\'s the forecast for Brandenburg Briest Solarpark?',
@@ -60,9 +79,9 @@ function buildResponse(userText: string): string {
   if (!park) {
     if (/list|all|which|parks/.test(lower)) {
       const names = PARK_DATA.map(p => p.name).join(', ');
-      return `I have data for 11 German solar parks:\n\n${names}`;
+      return `I have data for ${PARK_DATA.length} German solar parks:\n\n${names}`;
     }
-    return `I can answer questions about any of the 11 German solar parks in this tool.\n\nTry asking:\n• "What's the forecast for Eggebek Solar Park?"\n• "Revenue gap for Solarpark Meuro"\n• "Heat risk for Brandenburg Briest"\n\nOr ask "list all parks" to see the full roster.`;
+    return `I can answer questions about any of the ${PARK_DATA.length} German solar parks in this tool.\n\nTry asking:\n• "What's the forecast for Eggebek Solar Park?"\n• "Revenue gap for Solarpark Meuro"\n• "Heat risk for Brandenburg Briest"\n\nOr ask "list all parks" to see the full roster.`;
   }
 
   if (isHeatQ) {
@@ -71,16 +90,10 @@ function buildResponse(userText: string): string {
   }
 
   if (isRevenueQ) {
-    const lifetimeBase = park.gwh * 30 * 0.86;
-    const revBase = (lifetimeBase * PRICE_EUR_PER_MWH) / 1000;
-    const rev245  = revBase * (1 + park.d245 / 100);
-    const rev585  = revBase * (1 + park.d585 / 100);
-    const gap245  = rev245 - revBase;
-    const gap585  = rev585 - revBase;
-    return `**Revenue outlook — ${park.name}**\n\nIndustry standard (30 yr): €${revBase.toFixed(0)}M\n\nModerate Warming (SSP2-4.5): €${rev245.toFixed(0)}M · gap €${Math.abs(gap245).toFixed(0)}M (${park.d245.toFixed(1)}%)\n\nHigh Emissions (SSP5-8.5): €${rev585.toFixed(0)}M · gap €${Math.abs(gap585).toFixed(0)}M (${park.d585.toFixed(1)}%)\n\nPrice assumption: €${PRICE_EUR_PER_MWH}/MWh — illustrative only.`;
+    return `**Revenue outlook — ${park.name}**\n\nIndustry standard (30 yr): €${park.rev_baseline.toFixed(0)}M\n\nModerate Warming (SSP2-4.5): gap −€${Math.abs(park.gap_245).toFixed(1)}M (${park.d245.toFixed(2)}%)\n\nHigh Emissions (SSP5-8.5): gap −€${Math.abs(park.gap_585).toFixed(1)}M (${park.d585.toFixed(2)}%)\n\nPrice assumption: ${park.price_label}.`;
   }
 
-  return `**${park.name}** · Solar · ${park.state}\n\nCapacity: ${park.capacity} MWp\nBaseline output: ~${park.gwh.toFixed(1)} GWh/year\n\nClimate-adjusted forecast (30-year lifetime):\n• Moderate Warming (SSP2-4.5): ${park.d245.toFixed(1)}% vs. industry standard\n• High Emissions (SSP5-8.5): ${park.d585.toFixed(1)}% vs. industry standard\n\nThe gap is driven mainly by temperature-accelerated panel degradation (Arrhenius effect) compounding over 30 years.\n\nHeat risk: ${park.risk}/10 · Ask me about the revenue impact for the full breakdown.`;
+  return `**${park.name}** · Solar · ${park.state}\n\nCapacity: ${park.capacity} MWp\nBaseline output: ~${park.gwh.toFixed(1)} GWh/year\n\nClimate-adjusted forecast (30-year lifetime):\n• Moderate Warming (SSP2-4.5): ${park.d245.toFixed(2)}% vs. industry standard\n• High Emissions (SSP5-8.5): ${park.d585.toFixed(2)}% vs. industry standard\n\nThe gap is driven mainly by temperature-accelerated panel degradation (Arrhenius effect) compounding over 30 years.\n\nHeat risk: ${park.risk}/10 · Ask me about the revenue impact for the full breakdown.`;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -192,7 +205,7 @@ function ChatList({ chats, onOpen, onNew, onClose }: ChatListProps) {
           <div className="chat-list-empty">
             <div className="welcome-icon"><BotIcon size={28} /></div>
             <p className="welcome-title">No conversations yet</p>
-            <p className="welcome-body">Ask me about any of the 11 German solar parks — forecasts, heat risk, revenue gaps.</p>
+            <p className="welcome-body">Ask me about any of the {PARK_DATA.length} German solar parks — forecasts, heat risk, revenue gaps.</p>
             <button className="btn-new-chat" onClick={onNew}>Start a conversation</button>
           </div>
         ) : (
@@ -281,7 +294,7 @@ function ChatDetail({ chat, onBack, onClose, onSend, typing }: ChatDetailProps) 
           <div className="chatbot-welcome">
             <div className="welcome-icon"><BotIcon size={28} /></div>
             <p className="welcome-title">Ask me about any park</p>
-            <p className="welcome-body">Forecasts, heat risk scores, revenue gaps — for all 11 solar parks.</p>
+            <p className="welcome-body">Forecasts, heat risk scores, revenue gaps — for all {PARK_DATA.length} solar parks.</p>
             <div className="suggestions">
               {SUGGESTIONS.map(s => (
                 <button key={s} className="suggestion-chip" onClick={() => submit(s)}>{s}</button>

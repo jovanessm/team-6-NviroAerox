@@ -139,12 +139,16 @@ model/
   validate.py          # check_specific_yield() + validate_prediction() asserts
   finance.py           # energy_to_revenue() — illustrative € translation (SMARD price)
   parks.py             # the 10 real MaStR parks (specs + ERA5 lat/lon)
-  precompute.py        # all parks × 3 scenarios → backend/precomputed.json
+  cmip6.py             # CMIP6 ensemble ΔT (default climate source; RCP2.6/4.5/8.5)
+  envirotrust.py       # EnviroTrust daily-max ΔT (comparison source; RCP4.5/8.5, warming forced)
+  precompute.py        # all parks × scenarios → backend/precomputed_{climate}_{model}.json (4 files)
   pvgis_calibration.py # baseline-vs-PVGIS check (see Calibration)
   tests/
 ```
 
-(`adapters.py` — the old EnviroTrust daily-max ΔT path — was removed; `cmip6.py` replaces it.)
+(`cmip6.py` is the headline ΔT driver. `envirotrust.py` re-introduces the EnviroTrust daily-max
+field — not as the climate driver, but as the second leg of a CMIP6-vs-EnviroTrust source
+comparison; its noisy/cooling trend is forced to a warming direction and stamped into provenance.)
 
 Public API (matches root contract):
 
@@ -217,10 +221,11 @@ constraint — build it in, don't bolt it on.
 
 1. Real MaStR specs (`parks.py`) + ERA5 baseline (`backend/CDS Data/era5_data/`) + CMIP6 ensemble
    deltas (`cmip6.py`, cached) are all wired. `simulate()` is the public entry point.
-2. Regenerate results: `python -m model.precompute` → `backend/precomputed.json` (10 parks × 3
-   scenarios, served instantly by the backend API). Use `--dry-run` to validate data without MC.
+2. Regenerate results: `python -m model.precompute --all` → the 4 `backend/precomputed_{climate}_{model}.json`
+   files (10 parks × scenarios, served instantly by the backend API). A single combo is
+   `--climate {cmip6,envirotrust} --model {noct,faiman}`; use `--dry-run` to validate data without MC.
 3. `pytest` green → `python -m model.pvgis_calibration` (PVGIS check) → results flow to the app via
-   `precomputed.json`.
+   the `precomputed_*.json` files.
 
 **Note for the app team:** the frontend `ParkForecast.tsx` still uses a synthetic `buildWarmingData()`
 + continuous warming slider — it does not yet read the real 3-scenario numbers from the API. The
