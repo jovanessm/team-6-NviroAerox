@@ -407,11 +407,16 @@ function ForecastTooltip({ active, label, data }: { active?: boolean; label?: nu
 // ── Main component ────────────────────────────────────────────────────────────
 
 export function ParkForecast({ park, onClose }: Props) {
-  const [useFaiman, setUseFaiman] = useState(true);
+  const [useFaiman,  setUseFaiman]  = useState(true);
+  const [opexInput,  setOpexInput]  = useState('');
 
   const windBoost     = faimanBaselineBoost(park.windExposure, park.meanWindMs);
   const factor        = useFaiman ? 1 : 1 / (1 + windBoost);
   const effectiveWind = park.windExposure * park.meanWindMs;
+
+  const opexKperYear  = Math.max(0, parseFloat(opexInput) || 0);
+  const opex30yr      = opexKperYear * 30 / 1000; // €M over 30 years
+  const hasOpex       = opexKperYear > 0;
 
   const rawData  = useMemo(() => buildMultiData(park), [park]);
   const data     = useMemo(
@@ -679,6 +684,105 @@ export function ParkForecast({ park, onClose }: Props) {
           <p className="finance-note">
             <Term tip="The real-market electricity price used for revenue calculations, derived from SMARD day-ahead market data.">Price assumption</Term>: {s2.price_label} · illustrative, not a financial forecast · n=3,000 Monte Carlo draws
           </p>
+        </div>
+
+        {/* ── Betriebskosten ────────────────────────────────── */}
+        <div className="opex-section">
+          <div className="opex-header">
+            <span className="opex-title">Operating Costs</span>
+            <span className="opex-sep">·</span>
+            <span className="opex-subtitle">Enter annual O&amp;M costs to calculate net profit</span>
+          </div>
+
+          <div className="opex-input-row">
+            <div className="opex-input-wrap">
+              <span className="opex-currency">€</span>
+              <input
+                type="number"
+                className="opex-input"
+                placeholder="0"
+                value={opexInput}
+                onChange={e => setOpexInput(e.target.value)}
+                min={0}
+                step={10}
+              />
+              <span className="opex-unit">k / year</span>
+            </div>
+            <div className="opex-presets">
+              <button className="opex-preset-btn" onClick={() => setOpexInput(String(Math.round(park.capacity_mwp * 10)))}>
+                Low <span className="opex-preset-rate">€10k/MWp</span>
+              </button>
+              <button className="opex-preset-btn" onClick={() => setOpexInput(String(Math.round(park.capacity_mwp * 17)))}>
+                Typical <span className="opex-preset-rate">€17k/MWp</span>
+              </button>
+              <button className="opex-preset-btn" onClick={() => setOpexInput(String(Math.round(park.capacity_mwp * 25)))}>
+                High <span className="opex-preset-rate">€25k/MWp</span>
+              </button>
+            </div>
+          </div>
+
+          <p className="opex-range-hint">
+            German solar parks: €10k–25k / MWp / yr
+            &nbsp;·&nbsp; for {park.capacity_mwp} MWp:
+            &nbsp;<strong>€{Math.round(park.capacity_mwp * 10)}k – €{Math.round(park.capacity_mwp * 25)}k / yr</strong>
+          </p>
+
+          {hasOpex && (
+            <div className="opex-result">
+              <div className="opex-result-header">
+                <span className="opex-result-title">Net profit over 30 years</span>
+                <span className="opex-30yr-total">30-yr costs: <strong>€{opex30yr.toFixed(1)}M</strong> &nbsp;·&nbsp; €{opexKperYear.toLocaleString('de-DE')}k/yr</span>
+              </div>
+
+              {/* Ledger — SSP2-4.5 P50 as headline */}
+              <div className="opex-calc">
+                <div className="opex-calc-row">
+                  <span>Gross revenue (P50 · SSP2-4.5)</span>
+                  <span>{fmtRev(s2.revP50)}</span>
+                </div>
+                <div className="opex-calc-row opex-calc-sub">
+                  <span>− Operating costs (30 yr)</span>
+                  <span>−{fmtRev(opex30yr)}</span>
+                </div>
+                <div className={`opex-calc-row opex-calc-total ${(s2.revP50 - opex30yr) >= 0 ? 'opex-pos' : 'opex-neg'}`}>
+                  <span>Net profit (P50 · SSP2-4.5)</span>
+                  <span>{(s2.revP50 - opex30yr) >= 0 ? '' : '−'}{fmtRev(Math.abs(s2.revP50 - opex30yr))}</span>
+                </div>
+              </div>
+
+              {/* Per-scenario breakdown cards */}
+              <div className="opex-scen-grid">
+                {SSP_SCENARIOS.map((scen, i) => {
+                  const s    = scenStats[i];
+                  const netP50 = s.revP50 - opex30yr;
+                  const netP10 = s.revP10 - opex30yr;
+                  const netP90 = s.revP90 - opex30yr;
+                  const profitable = netP50 >= 0;
+                  return (
+                    <div key={scen.id} className={`opex-scen-card ${profitable ? 'opex-scen-pos' : 'opex-scen-neg'}`}>
+                      <div className="opex-scen-top">
+                        <span className="opex-scen-dot" style={{ background: scen.line }} />
+                        <span className="opex-scen-label" style={{ color: scen.line }}>{scen.label}</span>
+                        <span className={`opex-scen-verdict ${profitable ? 'opex-pos' : 'opex-neg'}`}>
+                          {profitable ? '✓' : '✗'}
+                        </span>
+                      </div>
+                      <div className={`opex-scen-net ${profitable ? 'opex-pos' : 'opex-neg'}`}>
+                        {netP50 >= 0 ? '' : '−'}{fmtRev(Math.abs(netP50))}
+                      </div>
+                      <div className="opex-scen-sub">{scen.name}</div>
+                      <div className="opex-scen-range">
+                        <span>P10 {netP10 >= 0 ? '' : '−'}{fmtRev(Math.abs(netP10))}</span>
+                        <span>P90 {netP90 >= 0 ? '' : '−'}{fmtRev(Math.abs(netP90))}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <p className="opex-note">P50 expected · P10 worst-case · P90 best-case · costs flat (no inflation adjustment)</p>
+            </div>
+          )}
         </div>
 
       </div>

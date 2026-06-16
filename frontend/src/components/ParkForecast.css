@@ -740,6 +740,286 @@
   flex-shrink: 0;
 }
 
+/* ── Operating costs ─────────────────────────────────────────────────── */
+.opex-section {
+  margin-top: 1.5rem;
+  padding: 1rem 1.125rem;
+  background: var(--surface-raised, #f8fafc);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.opex-header {
+  display: flex;
+  align-items: baseline;
+  gap: 0.375rem;
+  margin-bottom: 0.875rem;
+}
+
+.opex-title {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.opex-sep {
+  color: var(--border);
+  font-size: 0.875rem;
+}
+
+.opex-subtitle {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.opex-input-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.opex-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.375rem 0.75rem;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.opex-input-wrap:focus-within {
+  border-color: var(--slate-400, #94a3b8);
+  box-shadow: 0 0 0 3px rgba(100,116,139,0.1);
+}
+
+.opex-currency {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.opex-input {
+  width: 80px;
+  border: none;
+  background: transparent;
+  font-size: 0.9375rem;
+  font-family: inherit;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--text-primary);
+  outline: none;
+  text-align: right;
+}
+
+.opex-input::-webkit-outer-spin-button,
+.opex-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.opex-input[type=number] { -moz-appearance: textfield; }
+
+.opex-unit {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.opex-presets {
+  display: flex;
+  gap: 0.375rem;
+  flex-wrap: wrap;
+}
+
+.opex-preset-btn {
+  padding: 0.3rem 0.7rem;
+  border-radius: 99px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-family: inherit;
+  line-height: 1.2;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+
+.opex-preset-btn:hover {
+  border-color: var(--text-secondary, #6b7280);
+  background: var(--surface-raised, #f1f5f9);
+  color: var(--text-primary);
+}
+
+.opex-preset-rate {
+  font-weight: 400;
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  margin-left: 0.2em;
+}
+
+.opex-range-hint {
+  font-size: 0.73rem;
+  color: var(--text-muted);
+  margin-top: 0.5rem;
+  line-height: 1.5;
+}
+
+/* ── Opex results ─────────────────────────────────────────────────────── */
+.opex-result {
+  margin-top: 1.125rem;
+  padding-top: 1.125rem;
+  border-top: 1px solid var(--border);
+}
+
+.opex-result-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-bottom: 0.875rem;
+}
+
+.opex-result-title {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.opex-30yr-total {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+/* Ledger calc */
+.opex-calc {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-bottom: 0.875rem;
+}
+
+.opex-calc-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0.875rem;
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border);
+}
+
+.opex-calc-row:last-child { border-bottom: none; }
+
+.opex-calc-row span:last-child {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.opex-calc-sub {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.opex-calc-sub span:last-child {
+  color: #dc2626;
+}
+
+.opex-calc-total {
+  font-weight: 700;
+  font-size: 0.875rem;
+}
+
+.opex-calc-total span:first-child {
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+/* Scenario cards */
+.opex-scen-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.625rem;
+  margin-bottom: 0.75rem;
+}
+
+.opex-scen-card {
+  padding: 0.75rem;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.opex-scen-card.opex-scen-pos { border-color: rgba(5,150,105,0.3); background: rgba(5,150,105,0.03); }
+.opex-scen-card.opex-scen-neg { border-color: rgba(220,38,38,0.3); background: rgba(220,38,38,0.03); }
+
+.opex-scen-top {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin-bottom: 0.375rem;
+}
+
+.opex-scen-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.opex-scen-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  flex: 1;
+}
+
+.opex-scen-verdict {
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.opex-scen-net {
+  font-size: 1.0625rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  margin-bottom: 0.125rem;
+}
+
+.opex-scen-sub {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  margin-bottom: 0.375rem;
+}
+
+.opex-scen-range {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  border-top: 1px solid var(--border);
+  padding-top: 0.375rem;
+  margin-top: 0.25rem;
+}
+
+/* Colour utilities */
+.opex-pos { color: #059669; }
+.opex-neg { color: #dc2626; }
+
+.opex-note {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin-top: 0.25rem;
+}
+
 /* ── Responsive ───────────────────────────────────────────────────────── */
 @media (max-width: 640px) {
   .forecast-headline {
@@ -748,5 +1028,12 @@
   .hl-sep {
     width: auto;
     height: 1px;
+  }
+  .opex-scen-grid {
+    grid-template-columns: 1fr;
+  }
+  .opex-input-row {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }
