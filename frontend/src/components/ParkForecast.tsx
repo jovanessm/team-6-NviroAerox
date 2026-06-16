@@ -624,6 +624,7 @@ export function ParkForecast({ park, onClose }: Props) {
               <path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>
             </svg>
             <span className="model-cmp-gain">+{modelGainPct.toFixed(1)}%</span>
+            <span className="model-cmp-gain-label">more output<br/>with Faiman</span>
           </div>
 
           {/* Faiman column — clickable */}
