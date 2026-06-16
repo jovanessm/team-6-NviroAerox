@@ -899,7 +899,7 @@ export function ParkForecast({ park, onClose }: Props) {
                   <span>{fmtRev(s2.npvP50)}</span>
                 </div>
                 <div className="opex-calc-row opex-calc-sub">
-                  <span>− NPV operating costs (6% WACC)</span>
+                  <span>− PV operating costs (6% WACC)</span>
                   <span>−{fmtRev(opexNPV)}</span>
                 </div>
                 <div className={`opex-calc-row opex-calc-total ${(s2.npvP50 - opexNPV) >= 0 ? 'opex-pos' : 'opex-neg'}`}>
