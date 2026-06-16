@@ -4,6 +4,7 @@ import {
 } from 'recharts';
 import { useState, useMemo } from 'react';
 import type { ParkEntry } from '../data/parks';
+import { ET_FAIMAN_BY_ID, ET_NOCT_BY_ID } from '../data/parks';
 import './ParkForecast.css';
 
 export type { ParkEntry };
@@ -78,10 +79,11 @@ interface MultiRow {
 }
 
 function buildMultiData(park: ParkEntry): MultiRow[] {
-  const scens = SSP_SCENARIOS.map(s => ({
-    years: park.scenarios[s.rcp].years,
-    dT30:  park.scenarios[s.rcp].dT_30yr_c,
-  }));
+  // Fall back to RCP4.5 data for the RCP2.6 slot when source lacks it (e.g. EnviroTrust)
+  const scens = SSP_SCENARIOS.map(s => {
+    const scen = park.scenarios[s.rcp] ?? park.scenarios['RCP4.5'];
+    return { years: scen.years, dT30: scen.dT_30yr_c };
+  });
 
   return scens[0].years.map((r1, i) => {
     const r2 = scens[1].years[i];
@@ -408,11 +410,20 @@ function ForecastTooltip({ active, label, data }: { active?: boolean; label?: nu
 
 export function ParkForecast({ park, onClose }: Props) {
   const [useFaiman,  setUseFaiman]  = useState(true);
+  const [useET,      setUseET]      = useState(false);
   const [opexInput,  setOpexInput]  = useState('');
 
+  // Resolve the active park dataset based on climate source + cell temp model
+  const activePark: ParkEntry = useMemo(() => {
+    if (!useET) return park;
+    const etMap = useFaiman ? ET_FAIMAN_BY_ID : ET_NOCT_BY_ID;
+    return etMap[park.id] ?? park;
+  }, [park, useET, useFaiman]);
+
+  // Scaling: only for CMIP6+NOCT (Faiman JSON scaled down); ET uses real separate datasets
   const windBoost     = faimanBaselineBoost(park.windExposure, park.meanWindMs);
   const noctFactor    = 1 / (1 + windBoost);
-  const factor        = useFaiman ? 1 : noctFactor;
+  const factor        = (!useET && !useFaiman) ? noctFactor : 1;
   const effectiveWind = park.windExposure * park.meanWindMs;
   const noctPanelDT   = 12.5; // 400 W/m² × 25°C / 800 = fixed NOCT heating
   const faimanPanelDT = 400 / (25 + 6.84 * effectiveWind); // Faiman cell ΔT
@@ -421,27 +432,47 @@ export function ParkForecast({ park, onClose }: Props) {
   const opex30yr      = opexKperYear * 30 / 1000; // €M over 30 years
   const hasOpex       = opexKperYear > 0;
 
-  const rawData  = useMemo(() => buildMultiData(park), [park]);
+  const rawData  = useMemo(() => buildMultiData(activePark), [activePark]);
   const data     = useMemo(
     () => factor === 1 ? rawData : rawData.map(d => scaleMultiRow(d, factor)),
     [rawData, factor],
   );
 
-  const rawS1 = makeStats(park, 'RCP2.6');
-  const rawS2 = makeStats(park, 'RCP4.5');
-  const rawS3 = makeStats(park, 'RCP8.5');
+  // RCP2.6 not available for EnviroTrust source — fall back to RCP4.5 for stats (hidden in UI)
+  const rawS1 = makeStats(activePark, activePark.hasRcp26 ? 'RCP2.6' : 'RCP4.5');
+  const rawS2 = makeStats(activePark, 'RCP4.5');
+  const rawS3 = makeStats(activePark, 'RCP8.5');
   const s1 = scaleStats(rawS1, factor);
   const s2 = scaleStats(rawS2, factor);
   const s3 = scaleStats(rawS3, factor);
   const scenStats: [ScenStats, ScenStats, ScenStats] = [s1, s2, s3];
 
-  const lifetimeBaseline = park.scenarios['RCP4.5'].lifetime_baseline_gwh * factor;
+  // Model comparison panel: show both variants for the active climate source
+  const cmpNoctPark    = useET ? (ET_NOCT_BY_ID[park.id]   ?? null) : null;
+  const cmpFaimanPark  = useET ? (ET_FAIMAN_BY_ID[park.id] ?? null) : null;
+  const cmpNoctS2      = useET && cmpNoctPark
+    ? makeStats(cmpNoctPark,   'RCP4.5')
+    : scaleStats(makeStats(park, 'RCP4.5'), noctFactor);
+  const cmpFaimanS2    = useET && cmpFaimanPark
+    ? makeStats(cmpFaimanPark, 'RCP4.5')
+    : makeStats(park, 'RCP4.5');
+  const cmpNoctLife    = useET && cmpNoctPark
+    ? cmpNoctPark.scenarios['RCP4.5'].lifetime_p50_gwh
+    : park.scenarios['RCP4.5'].lifetime_p50_gwh * noctFactor;
+  const cmpFaimanLife  = useET && cmpFaimanPark
+    ? cmpFaimanPark.scenarios['RCP4.5'].lifetime_p50_gwh
+    : park.scenarios['RCP4.5'].lifetime_p50_gwh;
+  const modelGainPct   = cmpNoctLife > 0
+    ? ((cmpFaimanLife - cmpNoctLife) / cmpNoctLife) * 100
+    : windBoost * 100;
+
+  const lifetimeBaseline = activePark.scenarios['RCP4.5'].lifetime_baseline_gwh * factor;
 
   const yMin = Math.floor(Math.min(...data.map(d => d.s3_p90)) * 0.98);
   const yMax = Math.ceil(data[0].baseline * 1.02);
 
   function downloadReport() {
-    const html = generateReportHtml(park, rawData, [rawS1, rawS2, rawS3]);
+    const html = generateReportHtml(activePark, rawData, [rawS1, rawS2, rawS3]);
     const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
     const url  = URL.createObjectURL(blob);
     window.open(url, '_blank');
@@ -508,6 +539,7 @@ export function ParkForecast({ park, onClose }: Props) {
       {/* ── SSP scenario strip ────────────────────────────── */}
       <div className="ssp-strip">
         {SSP_SCENARIOS.map((scen, i) => {
+          if (scen.rcp === 'RCP2.6' && !activePark.hasRcp26) return null;
           const st = scenStats[i];
           return (
             <div key={scen.id} className="ssp-row">
@@ -525,7 +557,22 @@ export function ParkForecast({ park, onClose }: Props) {
 
       {/* ── Model toggle ─────────────────────────────────── */}
       <div className="model-toggle-section">
-        <div className="model-toggle-label">Cell temperature model</div>
+        <div className="model-toggle-label">Climate source</div>
+        <div className="model-toggle-pills">
+          <button
+            className={`model-pill${!useET ? ' active' : ''}`}
+            onClick={() => setUseET(false)}
+          >
+            CMIP6
+          </button>
+          <button
+            className={`model-pill${useET ? ' active' : ''}`}
+            onClick={() => setUseET(true)}
+          >
+            EnviroTrust
+          </button>
+        </div>
+        <div className="model-toggle-label" style={{ marginTop: '0.5rem' }}>Cell temperature model</div>
         <div className="model-toggle-pills">
           <button
             className={`model-pill${!useFaiman ? ' active' : ''}`}
@@ -540,6 +587,11 @@ export function ParkForecast({ park, onClose }: Props) {
             Satellite · Faiman
           </button>
         </div>
+        {useET && (
+          <div className="model-toggle-meta">
+            EnviroTrust provides <strong>RCP4.5 and RCP8.5 only</strong> — SSP1-2.6 row hidden.
+          </div>
+        )}
         {/* ── Side-by-side model comparison ── */}
         <div className="model-cmp">
           {/* NOCT column — clickable */}
@@ -550,11 +602,11 @@ export function ParkForecast({ park, onClose }: Props) {
             </div>
             <div className="model-cmp-metric">
               <span className="model-cmp-label">30-yr P50 revenue</span>
-              <span className="model-cmp-value">{fmtRev(rawS2.revP50 * noctFactor)}</span>
+              <span className="model-cmp-value">{fmtRev(cmpNoctS2.revP50)}</span>
             </div>
             <div className="model-cmp-metric">
               <span className="model-cmp-label">Lifetime P50 output</span>
-              <span className="model-cmp-value">{fmtGwh(park.scenarios['RCP4.5'].lifetime_p50_gwh * noctFactor)}</span>
+              <span className="model-cmp-value">{fmtGwh(cmpNoctLife)}</span>
             </div>
             <div className="model-cmp-metric">
               <span className="model-cmp-label">Cell ΔT above ambient</span>
@@ -571,7 +623,7 @@ export function ParkForecast({ park, onClose }: Props) {
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>
             </svg>
-            <span className="model-cmp-gain">+{(windBoost * 100).toFixed(1)}%</span>
+            <span className="model-cmp-gain">+{modelGainPct.toFixed(1)}%</span>
           </div>
 
           {/* Faiman column — clickable */}
@@ -582,11 +634,11 @@ export function ParkForecast({ park, onClose }: Props) {
             </div>
             <div className="model-cmp-metric">
               <span className="model-cmp-label">30-yr P50 revenue</span>
-              <span className="model-cmp-value model-cmp-better">{fmtRev(rawS2.revP50)}</span>
+              <span className="model-cmp-value model-cmp-better">{fmtRev(cmpFaimanS2.revP50)}</span>
             </div>
             <div className="model-cmp-metric">
               <span className="model-cmp-label">Lifetime P50 output</span>
-              <span className="model-cmp-value model-cmp-better">{fmtGwh(park.scenarios['RCP4.5'].lifetime_p50_gwh)}</span>
+              <span className="model-cmp-value model-cmp-better">{fmtGwh(cmpFaimanLife)}</span>
             </div>
             <div className="model-cmp-metric">
               <span className="model-cmp-label">Cell ΔT above ambient</span>
@@ -602,7 +654,7 @@ export function ParkForecast({ park, onClose }: Props) {
 
       {/* ── Legend ───────────────────────────────────────── */}
       <div className="forecast-legend">
-        {SSP_SCENARIOS.map(scen => (
+        {SSP_SCENARIOS.filter(scen => scen.rcp !== 'RCP2.6' || activePark.hasRcp26).map(scen => (
           <span key={scen.id} className="legend-scen">
             <span className="legend-swatch" style={{ background: scen.line }} />
             {scen.label}

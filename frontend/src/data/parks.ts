@@ -1,4 +1,6 @@
-import rawData from './precomputed_faiman.json';
+import rawData        from './precomputed_faiman.json';
+import rawEtFaiman    from './precomputed_envirotrust_faiman.json';
+import rawEtNoct      from './precomputed_envirotrust_noct.json';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -40,10 +42,11 @@ export interface ParkEntry {
   commissioned: number;
   windExposure: number; // fraction of open-field wind at panel surface (Microsoft GRW satellite)
   meanWindMs:   number; // ERA5 mean wind_speed_10m, m/s
+  hasRcp26:     boolean; // false for EnviroTrust source (only RCP4.5 + RCP8.5)
   scenarios: {
-    'RCP2.6': ScenarioData;
-    'RCP4.5': ScenarioData;
-    'RCP8.5': ScenarioData;
+    'RCP2.6'?: ScenarioData;
+    'RCP4.5':  ScenarioData;
+    'RCP8.5':  ScenarioData;
   };
 }
 
@@ -117,24 +120,41 @@ function processScenario(raw: any): ScenarioData {
   };
 }
 
-// ── Exported park list ────────────────────────────────────────────────────────
+// ── Exported park lists ───────────────────────────────────────────────────────
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const PARKS: ParkEntry[] = (rawData as any).parks.map((p: any) => ({
-  id:           p.id,
-  name:         p.name,
-  type:         'solar' as const,
-  state:        STATE_MAP[p.id] ?? 'Germany',
-  lat:          p.lat,
-  lon:          p.lon,
-  capacity_mwp: +(p.capacity_kwp / 1000).toFixed(2),
-  risk:         p.risk_score,
-  commissioned: p.commissioned,
-  windExposure: WIND_DATA[p.id]?.windExposure ?? 0.75,
-  meanWindMs:   WIND_DATA[p.id]?.meanWindMs   ?? 3.5,
-  scenarios: {
-    'RCP2.6': processScenario(p.scenarios['RCP2.6']),
-    'RCP4.5': processScenario(p.scenarios['RCP4.5']),
-    'RCP8.5': processScenario(p.scenarios['RCP8.5']),
-  },
-}));
+function processParks(rawJson: any): ParkEntry[] {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return rawJson.parks.map((p: any) => {
+    const hasRcp26 = 'RCP2.6' in p.scenarios;
+    return {
+      id:           p.id,
+      name:         p.name,
+      type:         'solar' as const,
+      state:        STATE_MAP[p.id] ?? 'Germany',
+      lat:          p.lat,
+      lon:          p.lon,
+      capacity_mwp: +(p.capacity_kwp / 1000).toFixed(2),
+      risk:         p.risk_score,
+      commissioned: p.commissioned,
+      windExposure: WIND_DATA[p.id]?.windExposure ?? 0.75,
+      meanWindMs:   WIND_DATA[p.id]?.meanWindMs   ?? 3.5,
+      hasRcp26,
+      scenarios: {
+        ...(hasRcp26 && { 'RCP2.6': processScenario(p.scenarios['RCP2.6']) }),
+        'RCP4.5': processScenario(p.scenarios['RCP4.5']),
+        'RCP8.5': processScenario(p.scenarios['RCP8.5']),
+      },
+    };
+  });
+}
+
+export const PARKS: ParkEntry[] = processParks(rawData);
+
+export const ET_FAIMAN_PARKS: ParkEntry[] = processParks(rawEtFaiman);
+export const ET_NOCT_PARKS:   ParkEntry[] = processParks(rawEtNoct);
+
+export const ET_FAIMAN_BY_ID: Record<string, ParkEntry> =
+  Object.fromEntries(ET_FAIMAN_PARKS.map(p => [p.id, p]));
+export const ET_NOCT_BY_ID:   Record<string, ParkEntry> =
+  Object.fromEntries(ET_NOCT_PARKS.map(p => [p.id, p]));
