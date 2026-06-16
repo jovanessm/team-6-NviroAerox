@@ -606,6 +606,66 @@
   transform: none;
 }
 
+/* ── SSP scenario strip ───────────────────────────────────────────────── */
+.ssp-strip {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 1.25rem;
+}
+
+.ssp-row {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.8125rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.ssp-row:last-child {
+  border-bottom: none;
+}
+
+.ssp-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.ssp-scenario-label {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+  min-width: 72px;
+}
+
+.ssp-scenario-name {
+  color: var(--text-muted);
+  flex: 1;
+}
+
+.ssp-delta {
+  font-weight: 700;
+  color: #dc2626;
+  font-variant-numeric: tabular-nums;
+  min-width: 54px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.ssp-rev {
+  font-weight: 600;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+  min-width: 64px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
 /* ── Responsive ───────────────────────────────────────────────────────── */
 @media (max-width: 640px) {
   .forecast-headline {
