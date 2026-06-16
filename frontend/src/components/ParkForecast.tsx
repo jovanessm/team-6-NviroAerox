@@ -148,6 +148,10 @@ interface ScenStats {
   revP50:       number;
   revP10:       number; // pessimistic revenue
   revP90:       number; // optimistic revenue
+  npvBaseline:  number; // NPV @ 6% WACC
+  npvP50:       number;
+  npvP10:       number;
+  npvGap:       number;
   lossPct:      number;
   gapM:         number;
   gapPct:       number;
@@ -156,7 +160,8 @@ interface ScenStats {
 }
 
 function makeStats(park: ParkEntry, rcp: 'RCP2.6' | 'RCP4.5' | 'RCP8.5'): ScenStats {
-  const s = park.scenarios[rcp];
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+  const s = park.scenarios[rcp]!;
   return {
     lifetimeP50:  s.lifetime_p50_gwh,
     lifetimeP10:  s.lifetime_p10_gwh,
@@ -165,6 +170,10 @@ function makeStats(park: ParkEntry, rcp: 'RCP2.6' | 'RCP4.5' | 'RCP8.5'): ScenSt
     revP50:       s.finance.lifetime_p50_meur,
     revP10:       s.finance.lifetime_p10_meur,
     revP90:       s.finance.lifetime_p90_meur,
+    npvBaseline:  s.finance.npv_baseline_meur,
+    npvP50:       s.finance.npv_p50_meur,
+    npvP10:       s.finance.npv_p10_meur,
+    npvGap:       s.finance.npv_gap_meur,
     lossPct:      s.delta_pct,
     gapM:         s.finance.revenue_gap_meur,
     gapPct:       s.finance.revenue_gap_pct,
@@ -184,6 +193,10 @@ function scaleStats(s: ScenStats, f: number): ScenStats {
     revP50:      s.revP50 * f,
     revP10:      s.revP10 * f,
     revP90:      s.revP90 * f,
+    npvBaseline: s.npvBaseline * f,
+    npvP50:      s.npvP50 * f,
+    npvP10:      s.npvP10 * f,
+    npvGap:      s.npvGap * f,
     gapM:        s.gapM * f,
   };
 }
@@ -770,14 +783,37 @@ export function ParkForecast({ park, onClose }: Props) {
               </thead>
               <tbody>
                 <tr>
-                  <td className="row-label">30-yr revenue (P50)</td>
+                  <td className="row-label">
+                    Nominal revenue (P50)
+                    <span className="fin-row-hint">undiscounted 30-yr sum</span>
+                  </td>
                   <td>{fmtRev(s2.revBaseline)}</td>
                   {activePark.hasRcp26 && <td>{fmtRev(s1.revP50)}</td>}
                   <td>{fmtRev(s2.revP50)}</td>
                   <td>{fmtRev(s3.revP50)}</td>
                 </tr>
+                <tr className="fin-tr-highlight">
+                  <td className="row-label">
+                    <Term tip="Net Present Value: future revenues discounted at 6% WACC (typical German utility-scale solar project finance rate). Year 30 cash flows are worth ~17 cents today — NPV is what lenders actually underwrite.">NPV (P50 · 6% WACC)</Term>
+                    <span className="fin-row-hint">time-value-adjusted · lender view</span>
+                  </td>
+                  <td>{fmtRev(s2.npvBaseline)}</td>
+                  {activePark.hasRcp26 && <td>{fmtRev(s1.npvP50)}</td>}
+                  <td>{fmtRev(s2.npvP50)}</td>
+                  <td>{fmtRev(s3.npvP50)}</td>
+                </tr>
                 <tr>
-                  <td className="row-label">Shortfall vs industry</td>
+                  <td className="row-label">
+                    NPV shortfall vs industry
+                    <span className="fin-row-hint">discounted gap a lender would underwrite</span>
+                  </td>
+                  <td className="em-dash">—</td>
+                  {activePark.hasRcp26 && <td className="gap-neg">{s1.npvGap < 0 ? '−' : '+'}€{Math.abs(s1.npvGap).toFixed(1)}M</td>}
+                  <td className="gap-neg">{s2.npvGap < 0 ? '−' : '+'}€{Math.abs(s2.npvGap).toFixed(1)}M</td>
+                  <td className="gap-neg">{s3.npvGap < 0 ? '−' : '+'}€{Math.abs(s3.npvGap).toFixed(1)}M</td>
+                </tr>
+                <tr>
+                  <td className="row-label">Nominal shortfall vs industry</td>
                   <td className="em-dash">—</td>
                   {activePark.hasRcp26 && <td className="gap-neg">{s1.gapM < 0 ? '−' : '+'}€{Math.abs(s1.gapM).toFixed(1)}M ({Math.abs(s1.gapPct).toFixed(2)}%)</td>}
                   <td className="gap-neg">{s2.gapM < 0 ? '−' : '+'}€{Math.abs(s2.gapM).toFixed(1)}M ({Math.abs(s2.gapPct).toFixed(2)}%)</td>
@@ -785,29 +821,19 @@ export function ParkForecast({ park, onClose }: Props) {
                 </tr>
                 <tr>
                   <td className="row-label">
-                    Downside (P10)
+                    Downside NPV (P10)
                     <span className="fin-row-hint">worst-case 10th pct — 90% exceedance</span>
                   </td>
                   <td className="em-dash">—</td>
-                  {activePark.hasRcp26 && <td>{fmtRev(s1.revP10)}</td>}
-                  <td>{fmtRev(s2.revP10)}</td>
-                  <td>{fmtRev(s3.revP10)}</td>
-                </tr>
-                <tr>
-                  <td className="row-label">
-                    Upside (P90)
-                    <span className="fin-row-hint">best-case 90th pct — 10% exceedance</span>
-                  </td>
-                  <td className="em-dash">—</td>
-                  {activePark.hasRcp26 && <td>{fmtRev(s1.revP90)}</td>}
-                  <td>{fmtRev(s2.revP90)}</td>
-                  <td>{fmtRev(s3.revP90)}</td>
+                  {activePark.hasRcp26 && <td>{fmtRev(s1.npvP10)}</td>}
+                  <td>{fmtRev(s2.npvP10)}</td>
+                  <td>{fmtRev(s3.npvP10)}</td>
                 </tr>
               </tbody>
             </table>
           </div>
           <p className="finance-note">
-            <Term tip="The real-market electricity price used for revenue calculations, derived from SMARD day-ahead market data.">Price assumption</Term>: {s2.price_label} · illustrative, not a financial forecast · n=3,000 Monte Carlo draws
+            <Term tip="The real-market electricity price used for revenue calculations, derived from SMARD day-ahead market data.">Price assumption</Term>: {s2.price_label} · NPV discounted at 6% WACC · illustrative, not a financial forecast · n=3,000 Monte Carlo draws
           </p>
         </div>
 

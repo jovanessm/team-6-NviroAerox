@@ -509,6 +509,11 @@
   background: var(--slate-50);
 }
 
+.fin-tr-highlight td {
+  background: rgba(16,185,129,0.06);
+  font-weight: 600;
+}
+
 .row-label {
   text-align: left !important;
   color: var(--text-secondary) !important;

@@ -25,6 +25,10 @@ export interface ScenarioData {
     lifetime_p50_meur:      number;
     lifetime_p10_meur:      number; // pessimistic revenue (P10 of MC = P90 exceedance in solar finance)
     lifetime_p90_meur:      number; // optimistic revenue (P90 of MC = P10 exceedance)
+    npv_baseline_meur:      number; // NPV @ 6% WACC — same energy, discounted by time-value-of-money
+    npv_p50_meur:           number;
+    npv_p10_meur:           number;
+    npv_gap_meur:           number; // NPV revenue gap: p50 − baseline
     revenue_gap_meur:       number;
     revenue_gap_pct:        number;
   };
@@ -101,6 +105,19 @@ function processScenario(raw: any): ScenarioData {
   const lifetime_p90_kwh = raw.lifetime_p90_kwh as number;
   const pricePerKwh = (raw.finance.lifetime_baseline_meur * 1e6) / (raw.lifetime_baseline_kwh as number);
 
+  // NPV @ 6% WACC: discount each year's revenue by 1/(1+r)^t, t=1..30
+  const NPV_RATE = 0.06;
+  const discountFactor = (t: number) => 1 / Math.pow(1 + NPV_RATE, t);
+  const baselineKwh = raw.baseline_annual_kwh as number[];
+  const p50Kwh      = raw.p50_kwh           as number[];
+  const p10Kwh      = raw.p10_kwh           as number[];
+  const npv = (arr: number[]) =>
+    +(arr.reduce((sum, v, i) => sum + v * pricePerKwh * discountFactor(i + 1), 0) / 1e6).toFixed(1);
+
+  const npv_baseline = npv(baselineKwh);
+  const npv_p50      = npv(p50Kwh);
+  const npv_p10      = npv(p10Kwh);
+
   return {
     years,
     lifetime_baseline_gwh: kwh2gwh(raw.lifetime_baseline_kwh),
@@ -114,6 +131,10 @@ function processScenario(raw: any): ScenarioData {
       lifetime_p50_meur:      raw.finance.lifetime_p50_meur,
       lifetime_p10_meur:      +(lifetime_p10_kwh * pricePerKwh / 1e6).toFixed(1), // pessimistic revenue
       lifetime_p90_meur:      +(lifetime_p90_kwh * pricePerKwh / 1e6).toFixed(1), // optimistic revenue
+      npv_baseline_meur:      npv_baseline,
+      npv_p50_meur:           npv_p50,
+      npv_p10_meur:           npv_p10,
+      npv_gap_meur:           +(npv_p50 - npv_baseline).toFixed(1),
       revenue_gap_meur:       raw.finance.revenue_gap_meur,
       revenue_gap_pct:        raw.finance.revenue_gap_pct,
     },

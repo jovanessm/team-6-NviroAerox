@@ -27,14 +27,14 @@ interface ChatPark {
   commissioned:     number;
   gwh:              number;  // annual baseline GWh
   lifetime_gwh:     number;  // 30-year baseline total GWh
-  d226:             number;  // RCP2.6 delta_pct
+  d226:             number | null;  // RCP2.6 delta_pct (null for EnviroTrust parks)
   d245:             number;  // RCP4.5 delta_pct
   d585:             number;  // RCP8.5 delta_pct
   dT_245:           number;  // temperature rise °C by yr30 at RCP4.5
   dT_585:           number;  // temperature rise °C by yr30 at RCP8.5
   risk:             number;
   rev_baseline:     number;  // lifetime baseline €M
-  gap_226:          number;  // revenue gap €M at RCP2.6
+  gap_226:          number | null;  // revenue gap €M at RCP2.6 (null for EnviroTrust parks)
   gap_245:          number;  // revenue gap €M at RCP4.5
   gap_585:          number;  // revenue gap €M at RCP8.5
   price_label:      string;
@@ -54,14 +54,14 @@ const PARK_DATA: ChatPark[] = PARKS.map(p => {
     commissioned:  p.commissioned,
     gwh:           +(s245.lifetime_baseline_gwh / 30).toFixed(1),
     lifetime_gwh:  +s245.lifetime_baseline_gwh.toFixed(1),
-    d226:          s226.delta_pct,
+    d226:          s226?.delta_pct ?? null,
     d245:          s245.delta_pct,
     d585:          s585.delta_pct,
     dT_245:        s245.dT_30yr_c,
     dT_585:        s585.dT_30yr_c,
     risk:          p.risk,
     rev_baseline:  s245.finance.lifetime_baseline_meur,
-    gap_226:       s226.finance.revenue_gap_meur,
+    gap_226:       s226?.finance.revenue_gap_meur ?? null,
     gap_245:       s245.finance.revenue_gap_meur,
     gap_585:       s585.finance.revenue_gap_meur,
     price_label:   s245.finance.price_assumption,
@@ -101,7 +101,7 @@ function parkCard(p: ChatPark): string {
     `**${p.name}** (${p.state})\n` +
     `Commissioned: ${p.commissioned} · Capacity: **${fmt(p.capacity)} MWp**\n` +
     `Annual baseline: **${fmt(p.gwh)} GWh/yr** · Lifetime: **${fmt(p.lifetime_gwh)} GWh**\n` +
-    `Climate delta — RCP2.6: **${sign(p.d226)}%** · RCP4.5: **${sign(p.d245)}%** · RCP8.5: **${sign(p.d585)}%**\n` +
+    `Climate delta — RCP2.6: **${p.d226 !== null ? sign(p.d226) + '%' : 'N/A'}** · RCP4.5: **${sign(p.d245)}%** · RCP8.5: **${sign(p.d585)}%**\n` +
     `Revenue gap — RCP4.5: **€${fmt(p.gap_245, 1)}M** · RCP8.5: **€${fmt(p.gap_585, 1)}M**\n` +
     `Heat risk: **${fmt(p.risk, 1)}/10** (${riskLabel}) · Price: ${p.price_label}`
   );
@@ -363,7 +363,7 @@ function buildResponse(text: string): string {
         `30-year baseline (industry standard): **€${fmt(p.rev_baseline, 1)}M**\n` +
         `Price assumption: ${p.price_label}\n\n` +
         `Climate-adjusted revenue gap:\n` +
-        `RCP2.6: **€${fmt(p.gap_226, 1)}M** (${sign(p.d226)}%)\n` +
+        `RCP2.6: **${p.gap_226 !== null ? '€' + fmt(p.gap_226, 1) + 'M (' + sign(p.d226!) + '%)' : 'N/A'}**\n` +
         `RCP4.5: **€${fmt(p.gap_245, 1)}M** (${sign(p.d245)}%)\n` +
         `RCP8.5: **€${fmt(p.gap_585, 1)}M** (${sign(p.d585)}%)\n\n` +
         `This is the gap a lender using a flat-history method would fail to price in.`
@@ -388,7 +388,7 @@ function buildResponse(text: string): string {
         `Capacity: ${fmt(p.capacity)} MWp · State: ${p.state}\n` +
         `Annual baseline: **${fmt(p.gwh)} GWh/yr** · Lifetime baseline: **${fmt(p.lifetime_gwh)} GWh**\n\n` +
         `Climate-adjusted lifetime delta (vs. industry standard):\n` +
-        `RCP2.6 (low emissions):  **${sign(p.d226)}%**\n` +
+        `RCP2.6 (low emissions):  **${p.d226 !== null ? sign(p.d226) + '%' : 'N/A'}**\n` +
         `RCP4.5 (moderate):       **${sign(p.d245)}%**\n` +
         `RCP8.5 (high emissions): **${sign(p.d585)}%**\n\n` +
         `The gap is driven by rising ambient temperature → lower panel efficiency + accelerated Arrhenius degradation.`
